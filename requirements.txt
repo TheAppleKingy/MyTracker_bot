@@ -9,6 +9,7 @@ alembic
 asn1crypto
 async-timeout
 asyncpg
+bcrypt
 cachetools
 celery
 elasticsearch
@@ -24,6 +25,7 @@ httpx
 kombu
 loguru
 oauthlib
+passlib
 pika
 pillow
 pydantic
