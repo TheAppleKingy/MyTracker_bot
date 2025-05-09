@@ -29,5 +29,6 @@ async def create_user(user_data: UserCreateSchema, session: AsyncSession = Depen
 
 @user_router.get('', response_model=List[UserViewSchema])
 async def get_users(session: AsyncSession = Depends(get_db_session)):
-    users = await session.execute(select(User))
+    query = await session.execute(select(User))
+    users = query.scalars().all()
     return users
