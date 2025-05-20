@@ -18,7 +18,7 @@ def get_filter_builder(model: T):
 
 
 class DBSocket:
-    def __init__(self, model: T, session: AsyncSession = Depends(get_db_session)):
+    def __init__(self, model: T, session: AsyncSession):
         self.__model: T = model
         self.__session = session
 
@@ -52,9 +52,5 @@ class DBSocket:
 
 class SocketFactory:
     @classmethod
-    def get_socket(cls, model: T):
-        return DBSocket(model)
-
-
-def get_socket(model: T):
-    return SocketFactory.get_socket(model)
+    def get_socket(cls, model: T, session: AsyncSession):
+        return DBSocket(model, session)
