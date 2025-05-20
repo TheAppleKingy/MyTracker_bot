@@ -18,3 +18,5 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
         except exc.SQLAlchemyError:
             await session.rollback()
             raise
+        finally:
+            await session.close()
