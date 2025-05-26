@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from schemas import UserCreateSchema, UserViewSchema
 
-from models.models import User
+from user_service.src.models.users import User
 
 from typing import List
 

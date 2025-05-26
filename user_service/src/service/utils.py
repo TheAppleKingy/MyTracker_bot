@@ -4,7 +4,9 @@ from functools import lru_cache
 
 from typing import Any, Iterable, TypeVar
 
-from sqlalchemy import Integer, String, Integer, Float, Boolean, Date, DateTime, Numeric, Text, SmallInteger
+from sqlalchemy import Integer, String, Integer, Float, Boolean, Date, DateTime, Numeric, Text, SmallInteger, Table, Column, ForeignKey
+
+from models import Base
 
 
 T = TypeVar('T')
@@ -159,3 +161,59 @@ class QueryFilterBuilderFabric:
     @classmethod
     def get_build(cls, model: T):
         return QueryFilterBuilder(model).build
+
+
+class M2MBuilder:
+    """This builder can build m2m table only by first pk in model attr list. Advise to define "id" in Base"""
+
+    def __init__(self, model1: T, model2: T):
+        self._model1 = model1
+        self._model2 = model2
+        self.__metadata = Base.metadata
+
+    def get_tablename(self, by_model: int) -> str:
+        model = getattr(self, f'_model{by_model}')
+        if not (model.__tablename__.islower() and model.__tablename__.endswith('s')):
+            raise ValueError(f'Tablename for model {model} is incorrect')
+        return model.__tablename__
+
+    def get_pk(self, by_model: int):
+        model = getattr(self, f'_model{by_model}')
+        for column in model.__table__.columns.values():
+            if column.primary_key:
+                return str(column)
+        raise AttributeError(f'"{model.__tablename__}" has no pk')
+
+    def build_m2m_name(self) -> str:
+        name1 = self.get_tablename(1)
+        name2 = self.get_tablename(2)
+        return f'{name1}_{name2}'
+
+    def get_single_name(self, for_model: int):
+        tablename = self.get_tablename(for_model)
+        return tablename.removesuffix('s')
+
+    def get_fk_columns(self) -> list[Column]:
+        pk1, pk2 = self.get_pk(1), self.get_pk(2)
+        pk_name1, pk_name2 = pk1.split('.')[1], pk2.split('.')[1]
+        single_name1, single_name2 = self.get_single_name(
+            1), self.get_single_name(2)
+        column_name1, column_name2 = f'{single_name1}_{pk_name1}', f'{single_name2}_{pk_name2}'
+        return [Column(column_name1, ForeignKey(pk1), primary_key=True), Column(column_name2, ForeignKey(pk2), primary_key=True)]
+
+    def build_m2m(self, *args: Column) -> Table:
+        m2m_name = self.build_m2m_name()
+        fk = self.get_fk_columns()
+        m2m_table = Table(
+            m2m_name,
+            self.__metadata,
+            *fk,
+            *args
+        )
+        return m2m_table
+
+
+class M2MFactory:
+    @classmethod
+    def get_m2m_table(cls, model1: T, model2: T):
+        return M2MBuilder(model1, model2).build_m2m()
