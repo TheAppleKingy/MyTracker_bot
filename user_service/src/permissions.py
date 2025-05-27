@@ -1,4 +1,4 @@
-from models.models import User
+from user_service.src.models.users import User
 
 from fastapi import HTTPException, status
 
