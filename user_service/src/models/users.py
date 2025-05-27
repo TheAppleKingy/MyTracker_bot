@@ -1,5 +1,7 @@
 from . import Base
 
+from .tasks import Task, users_tasks
+
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, Table, Column, ForeignKey
 
@@ -17,15 +19,17 @@ users_groups = Table(
 class User(Base):
     __tablename__ = 'users'
     username: Mapped[str] = mapped_column(
-        String(50), nullable=False, unique=True)
+        String(50), unique=True)
     email: Mapped[str] = mapped_column(
-        String(50), unique=True, nullable=False)
-    password: Mapped[str] = mapped_column(nullable=False)
-    first_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    last_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    is_active = Mapped[bool] = mapped_column(nullable=False, default=False)
-    groups = relationship('Group', secondary=users_groups,
+        String(50), unique=True)
+    password: Mapped[str] = mapped_column()
+    first_name: Mapped[str] = mapped_column(String(100))
+    last_name: Mapped[str] = mapped_column(String(100))
+    is_active: Mapped[bool] = mapped_column(default=False)
+    groups = relationship(secondary=users_groups,
                           back_populates='users')
+    tasks: Mapped[list['Task']] = relationship(
+        secondary=users_tasks, back_populates='users', lazy='joined')
 
     def set_password(self):
         self.password = hash_password(self.password)
@@ -39,7 +43,7 @@ class Group(Base):
     __tablename__ = 'groups'
     title: Mapped[str] = mapped_column(String(20), nullable=False)
     users = relationship('User', secondary=users_groups,
-                         back_populates='groups')
+                         back_populates='groups', lazy='joined')
 
 
 """By models/methods perms may be added"""
