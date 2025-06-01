@@ -1,9 +1,9 @@
 Учебный проект: Таск-трекер
 
-Создать миграцию
-alembic init -t async migration //после этого создается alembic.ini
+Создать alembic.ini
+alembic init -t async migration
 
-Обновить миграции при обновлении моделей данных
+Создать миграцию
 alembic revision --autogenerate -m "migration message"
 
 Применить миграции до последней

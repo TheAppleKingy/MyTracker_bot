@@ -4,7 +4,7 @@ from sqlalchemy import select, update, delete, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.expression import ColumnElement
 
-from .utils import commitable, hashable
+from .utils import commitable
 
 
 T = TypeVar('T')
@@ -27,33 +27,42 @@ class DBSocket:
 
     @commitable
     async def delete_db_objs(self, *conditions: ColumnElement[bool]):
+        """commitable method"""
         query = delete(self.model).where(*conditions).returning(self.model)
         res = await self.session.execute(query)
         return res.scalars().all()
 
     @commitable
     async def update_db_objs(self, *conditions: ColumnElement[bool], **kwargs):
+        """commitable method"""
         query = update(self.model).where(
             *conditions).values(**kwargs).returning(self.model)
+        print(query)
         res = await self.session.execute(query)
         updated = res.scalars().all()
         return updated
 
-    @hashable(['password'])
     @commitable
     async def create_db_obj(self, **kwargs) -> T:
+        """commitable method"""
         query = insert(self.model).values(**kwargs).returning(self.model)
         res = await self.session.execute(query)
         obj = res.scalar_one()
         return obj
 
-    @hashable(['password'])
     @commitable
-    async def create_db_objs(self, raws: Sequence[dict]) -> list[T]:
-        query = insert(self.model).values(raws).returning(self.model)
+    async def create_db_objs(self, table_raws: Sequence[dict]) -> list[T]:
+        """commitable method"""
+        query = insert(self.model).values(table_raws).returning(self.model)
         res = await self.session.execute(query)
         objs = res.scalars().all()
         return objs
+
+    async def force_commit(self):
+        await self.session.commit()
+
+    async def refresh(self, obj: T):
+        await self.session.refresh(obj)
 
 
 class SocketFactory:

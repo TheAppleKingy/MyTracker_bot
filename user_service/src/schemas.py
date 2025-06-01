@@ -1,15 +1,25 @@
 from pydantic import BaseModel, Field
 
+from typing import Optional
+
 
 class UserCreateSchema(BaseModel):
-    username: str = Field(max_length=256)
-    email: str = Field(max_length=256)
+    tg_name: str = Field(max_length=50)
+    email: str = Field(max_length=50)
+    first_name: Optional[str] = Field(max_length=100)
+    last_name: Optional[str] = Field(max_length=100)
     password: str = Field(max_length=25)
 
 
 class UserViewSchema(BaseModel):
-    username: str
+    id: int
+    tg_name: str
     email: str
 
-    class Config:
-        orm_mode = True
+
+class UserUpdateSchema(BaseModel):
+    tg_name: Optional[str] = Field(max_length=50, default=None)
+    email: Optional[str] = Field(max_length=50, default=None)
+    first_name: Optional[str] = Field(max_length=100, default=None)
+    last_name: Optional[str] = Field(max_length=100, default=None)
+    is_active: Optional[bool] = None
