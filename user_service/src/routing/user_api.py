@@ -1,10 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Cookie
+from fastapi import APIRouter, Depends, status
 
 from schemas import UserCreateSchema, UserViewSchema, UserUpdateSchema
 
 from models.models import User
-from fastapi.requests import Request
-from fastapi.responses import Response, JSONResponse
 from service.service import DBSocket
 
 from dependencies import db_socket_dependency

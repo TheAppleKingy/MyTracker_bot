@@ -15,10 +15,12 @@ class DBSocket:
         self.model: T = model
         self.session = session
 
-    async def get_db_obj(self, *args: ColumnElement[bool]) -> T:
+    async def get_db_obj(self, *args: ColumnElement[bool], raise_exception: bool = False) -> T:
         query = select(self.model).where(*args)
         db_resp = await self.session.execute(query)
-        return db_resp.scalar_one()
+        if raise_exception:
+            return db_resp.scalar_one()
+        return db_resp.scalar_one_or_none()
 
     async def get_db_objs(self, *args: ColumnElement[bool]) -> list[T]:
         query = select(self.model).where(*args)

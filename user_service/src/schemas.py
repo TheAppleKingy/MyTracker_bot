@@ -23,3 +23,8 @@ class UserUpdateSchema(BaseModel):
     first_name: Optional[str] = Field(max_length=100, default=None)
     last_name: Optional[str] = Field(max_length=100, default=None)
     is_active: Optional[bool] = None
+
+
+class LoginSchema(BaseModel):
+    email: str
+    password: str

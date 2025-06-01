@@ -59,16 +59,16 @@ services:
     env_file:
       - .env
 
-  elasticsearch:
-    image: elasticsearch:8.16.2
-    ports:
-      - 9200:9200
-      - 9300:9300
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-    volumes:
-      - esdata:/usr/share/elasticsearch/data
+  # elasticsearch:
+  #   image: elasticsearch:8.16.2
+  #   ports:
+  #     - 9200:9200
+  #     - 9300:9300
+  #   environment:
+  #     - discovery.type=single-node
+  #     - xpack.security.enabled=false
+  #   volumes:
+  #     - esdata:/usr/share/elasticsearch/data
 
   worker:
     build:
