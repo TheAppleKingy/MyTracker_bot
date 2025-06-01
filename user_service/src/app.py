@@ -4,7 +4,7 @@ app = FastAPI()
 
 
 def include_routers():
-    from routing import user_router
+    from routing.user_api import user_router
     app.include_router(user_router)
 
 
