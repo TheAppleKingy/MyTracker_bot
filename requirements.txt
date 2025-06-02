@@ -47,3 +47,5 @@ tzdata
 tzlocal
 urllib3
 uvicorn
+fastapi-cachetools
+fastapi-cache2

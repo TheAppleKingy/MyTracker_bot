@@ -3,7 +3,6 @@ from . import Base
 from datetime import datetime, timezone, timedelta
 
 from sqlalchemy import String, DateTime, ForeignKey
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship, mapped_column, validates, Mapped
 
 
@@ -19,8 +18,8 @@ class Task(Base):
         DateTime(timezone=True), nullable=True)
     done: Mapped[bool] = mapped_column(default=False)
     subtasks: Mapped[list['SubTask']] = relationship(
-        back_populates='task', cascade='all, delete-orphan', lazy='joined')
-    users: Mapped[list[int]] = mapped_column(JSONB, default=list)
+        back_populates='task', cascade='all, delete-orphan', lazy='selectin')
+    user: Mapped[int] = mapped_column()
 
     @validates('pass_date')
     def validate_pass_date(self, key, value):
