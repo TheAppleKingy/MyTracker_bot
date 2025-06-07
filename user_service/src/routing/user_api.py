@@ -16,7 +16,7 @@ user_router = APIRouter(
 
 @user_router.post('', response_model=UserViewSchema, status_code=status.HTTP_201_CREATED)
 async def create_user(user_data: UserCreateSchema, request_user: User = Depends(get_user_allowed_by_group('Admin')), user_socket: DBSocket = Depends(db_socket_dependency(User))):
-    user = await user_socket.create_db_obj(**user_data.model_dump())
+    user = await user_socket.create_db_obj(**user_data.model_dump(exclude_none=True))
     user.set_password()
     return user
 

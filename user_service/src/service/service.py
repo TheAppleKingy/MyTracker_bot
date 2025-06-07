@@ -39,7 +39,6 @@ class DBSocket:
         """commitable method"""
         query = update(self.model).where(
             *conditions).values(**kwargs).returning(self.model)
-        print(query)
         res = await self.session.execute(query)
         updated = res.scalars().all()
         return updated

@@ -6,8 +6,8 @@ from typing import Optional
 class UserCreateSchema(BaseModel):
     tg_name: str = Field(max_length=50)
     email: str = Field(max_length=50)
-    first_name: Optional[str] = Field(max_length=100)
-    last_name: Optional[str] = Field(max_length=100)
+    first_name: Optional[str] = Field(max_length=100, default=None)
+    last_name: Optional[str] = Field(max_length=100, default=None)
     password: str = Field(max_length=25)
 
 
