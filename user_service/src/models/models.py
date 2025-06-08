@@ -18,7 +18,7 @@ class User(Base):
     last_name: Mapped[str] = mapped_column(String(100), nullable=True)
     is_active: Mapped[bool] = mapped_column(default=False)
     groups: Mapped[list['Group']] = relationship(secondary=users_groups,
-                                                 back_populates='users', lazy='selectin')
+                                                 back_populates='users', lazy='selectin', passive_deletes=True)
     tasks: Mapped[list[int]] = mapped_column(JSONB, default=list)
 
     def set_password(self):
@@ -33,7 +33,7 @@ class Group(Base):
     __tablename__ = 'groups'
     title: Mapped[str] = mapped_column(String(20))
     users: Mapped[list['User']] = relationship(secondary=users_groups,
-                                               back_populates='groups', lazy='selectin')
+                                               back_populates='groups', lazy='selectin', passive_deletes=True)
 
 
 """By models/methods perms may be added"""

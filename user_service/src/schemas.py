@@ -12,9 +12,9 @@ class UserCreateSchema(BaseModel):
 
 
 class UserViewSchema(BaseModel):
-    id: int
-    tg_name: str
-    email: str
+    id: Optional[int] = Field(default=None)
+    tg_name: Optional[str] = Field(default=None)
+    email: Optional[str] = Field(default=None)
 
 
 class UserUpdateSchema(BaseModel):
@@ -28,3 +28,16 @@ class UserUpdateSchema(BaseModel):
 class LoginSchema(BaseModel):
     email: str
     password: str
+
+
+class GroupVeiwSchema(BaseModel):
+    id: int
+    title: str = Field(max_length=20)
+    users: list[UserViewSchema]
+
+    class Config:
+        orm_mode = True
+
+
+class GroupUpdateSchema(BaseModel):
+    users: list[int]
