@@ -10,14 +10,16 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, Asyn
 
 from httpx import AsyncClient, ASGITransport
 
-from dependencies import get_user_allowed_by_group, authenticate
+from dependencies import get_user_allowed_by_group, jwt_authentication
 from security.authentication import access, refresh
 from database import get_db_session
 from config import FORMATTED_DATABASE_URL, TEST_DATABASE_URL
 from app import app
 from models.base import Base
 from models.models import User, Group
-from service.service import DBSocket
+from service.factories import UserServiceFactory, GroupServiceFactory
+from service.user_service import UserService
+from repository.socket import SocketFactory
 
 
 test_db_name = os.getenv('TEST_DB_NAME')
@@ -73,18 +75,20 @@ async def setup(session: AsyncSession):
 
 
 @pytest.fixture
-def user_socket(session):
-    return DBSocket(User, session)
+def user_service(session):
+    socket = SocketFactory.get_socket(User, session)
+    user_service = UserServiceFactory.get_service(socket)
+    return user_service
 
 
 @pytest_asyncio.fixture
-async def admin_user(user_socket: DBSocket):
-    return await user_socket.get_db_obj(User.tg_name == 'admin')
+async def admin_user(user_service: UserService):
+    return await user_service.get_user(User.tg_name == 'admin')
 
 
 @pytest_asyncio.fixture
-async def simple_user(user_socket: DBSocket):
-    return await user_socket.get_db_obj(User.tg_name == 'simple_user')
+async def simple_user(user_service: UserService):
+    return await user_service.get_user(User.tg_name == 'simple_user')
 
 
 @pytest_asyncio.fixture

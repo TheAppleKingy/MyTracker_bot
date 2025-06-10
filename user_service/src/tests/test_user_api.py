@@ -4,7 +4,7 @@ import asyncio
 
 from models.models import User
 from models.associations import users_groups
-from service.service import DBSocket
+from service.user_service import UserService
 from schemas import UserViewSchema, UserUpdateSchema
 
 from sqlalchemy import select
@@ -15,20 +15,20 @@ pytest_mark_asyncio = pytest.mark.asyncio
 
 
 @pytest_mark_asyncio
-async def test_create_user(admin_client: httpx.AsyncClient, user_socket: DBSocket):
+async def test_create_user(admin_client: httpx.AsyncClient, user_service: UserService):
     data = {
         'tg_name': 'test_tg',
         'email': 'test_email@mail.com',
         'password': 'test_password'
     }
     result = await admin_client.post('/api/users', json=data)
-    created_user = await user_socket.get_db_obj(User.tg_name == data['tg_name'])
+    created_user = await user_service.get_user(User.tg_name == data['tg_name'])
     assert created_user is not None
     assert result.status_code == 201
 
 
 @pytest_mark_asyncio
-async def test_create_fail(admin_client: httpx.AsyncClient, user_socket: DBSocket):
+async def test_create_fail(admin_client: httpx.AsyncClient, user_service: UserService):
     data = {
         'tg_name': 'test_tg',
         'password': 'test_password'
@@ -37,11 +37,11 @@ async def test_create_fail(admin_client: httpx.AsyncClient, user_socket: DBSocke
     assert response.status_code == 422
     assert response.json() == {'detail': [{'type': 'missing', 'loc': [
         'body', 'email'], 'msg': 'Field required', 'input': {'tg_name': 'test_tg', 'password': 'test_password'}}]}
-    assert await user_socket.get_db_obj(User.tg_name == data['tg_name']) is None
+    assert await user_service.get_user(User.tg_name == data['tg_name']) is None
 
 
 @pytest_mark_asyncio
-async def test_create_unauthorized(client: httpx.AsyncClient, user_socket: DBSocket):
+async def test_create_unauthorized(client: httpx.AsyncClient):
     data = {
         'any': 'any'
     }
@@ -51,7 +51,7 @@ async def test_create_unauthorized(client: httpx.AsyncClient, user_socket: DBSoc
 
 
 @pytest_mark_asyncio
-async def test_get_user(admin_client: httpx.AsyncClient, user_socket: DBSocket, simple_user):
+async def test_get_user(admin_client: httpx.AsyncClient, simple_user):
     response = await admin_client.get('/api/users/{}'.format(simple_user.id))
     assert response.status_code == 200
     assert response.json() == {
@@ -59,7 +59,7 @@ async def test_get_user(admin_client: httpx.AsyncClient, user_socket: DBSocket, 
 
 
 @pytest_mark_asyncio
-async def test_get_users(admin_client: httpx.AsyncClient, user_socket: DBSocket, admin_user: User, simple_user: User):
+async def test_get_users(admin_client: httpx.AsyncClient, admin_user: User, simple_user: User):
     response = await admin_client.get('/api/users')
     simple_view_schema = UserViewSchema.model_validate(
         simple_user, from_attributes=True).model_dump()
@@ -102,14 +102,14 @@ async def test_update_unauthorized(client: httpx.AsyncClient, simple_user: User)
 
 
 @pytest_mark_asyncio
-async def test_delete(admin_client: httpx.AsyncClient, user_socket: DBSocket, simple_user: User, session: AsyncSession):
+async def test_delete(admin_client: httpx.AsyncClient, user_service: UserService, simple_user: User, session: AsyncSession):
     id = simple_user.id
     query = select(users_groups).where(users_groups.c.user_id == id)
     res = await session.execute(query)
     assert res.scalars().all() != []
     response = await admin_client.delete('/api/users/{}'.format(id))
     assert response.status_code == 204
-    assert await user_socket.get_db_obj(User.id == id) is None
+    assert await user_service.get_user(User.id == id) is None
     res2 = await session.execute(query)
     assert res2.scalars().all() == []
 

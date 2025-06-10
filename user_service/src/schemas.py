@@ -30,6 +30,10 @@ class LoginSchema(BaseModel):
     password: str
 
 
+class UserInGroupSchema(BaseModel):
+    id: int
+
+
 class GroupVeiwSchema(BaseModel):
     id: int
     title: str = Field(max_length=20)
@@ -40,4 +44,4 @@ class GroupVeiwSchema(BaseModel):
 
 
 class GroupUpdateSchema(BaseModel):
-    users: list[int]
+    users: list[UserInGroupSchema]

@@ -1,7 +1,4 @@
-from fastapi.security import OAuth2PasswordBearer, OAuth2
-from fastapi.requests import Request
-from fastapi import HTTPException, Depends, status, Cookie
-from fastapi.responses import JSONResponse
+from fastapi import HTTPException, Depends, status
 
 from schemas import LoginSchema
 
@@ -10,13 +7,14 @@ from datetime import datetime, timezone, timedelta
 
 import jwt
 
-from dependencies import db_socket_dependency
+from dependencies import get_socket, get_user_service
 
-from service.service import DBSocket
+from repository.socket import Socket
+from service.user_service import UserService
 
 from models.models import User
 
-from typing import Optional
+from typing import Optional, Literal
 
 import config
 
@@ -72,9 +70,9 @@ def get_tokens_for_user(user: User):
     return access_token, refresh_token
 
 
-async def login_user(login_data: LoginSchema, socket: DBSocket = Depends(db_socket_dependency(User))) -> User:
+async def login_user(login_data: LoginSchema, user_service: UserService = Depends(get_user_service)) -> User:
     email, password = login_data.email, login_data.password
-    user = await socket.get_db_obj(User.email == email)
+    user = await user_service.get_user(User.email == email)
     if not user:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, {
                             'error': 'user with this email not found'})
@@ -87,8 +85,8 @@ async def login_user(login_data: LoginSchema, socket: DBSocket = Depends(db_sock
 class Auther:
     """base class for classes providing methods for authentication by token"""
 
-    def __init__(self, socket: DBSocket):
-        self.socket = socket
+    def __init__(self, user_service: UserService):
+        self.user_service = user_service
 
     async def auth(self, token: str) -> User:
         pass
@@ -101,7 +99,7 @@ class Auther:
 
 
 class JWTAuther(Auther):
-    async def auth(self, token: str, token_type: str = 'access') -> User:
+    async def auth(self, token: str, token_type: Literal['refresh', 'access']) -> User:
         payload = self.extract_payload(token, token_type)
         user = await self.get_user(payload)
         return user
@@ -117,7 +115,7 @@ class JWTAuther(Auther):
     async def get_user(self, decoded_token: dict):
         user_id = decoded_token['user_id']
         try:
-            user = await self.socket.get_db_obj(User.id == user_id)
+            user = await self.user_service.get_user(User.id == user_id, raise_exception=True)
         except NoResultFound:
             raise Exception(
                 {'error': 'Not existing user_id was set in token payload. Security threat!'})
