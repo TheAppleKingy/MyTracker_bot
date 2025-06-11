@@ -1,7 +1,6 @@
 FROM python:3.12-slim
 
 COPY worker/ /app
-COPY user_service/src/ /app/user_service
 COPY task_service/src/ /app/task_service
 COPY bots/src/ /app/bots
 
