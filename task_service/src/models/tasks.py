@@ -1,9 +1,9 @@
-from . import Base
-
 from datetime import datetime, timezone, timedelta
 
 from sqlalchemy import String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship, mapped_column, validates, Mapped
+
+from .associations import Base
 
 
 class Task(Base):
