@@ -11,12 +11,12 @@ class GroupService(Service):
     _target_model = Group
 
     async def get_group(self, *conditions: ColumnElement[bool], raise_exception: bool = False) -> Group:
-        user = await self.socket.get_db_obj(*conditions, raise_exception=raise_exception)
-        return user
+        group = await self.socket.get_db_obj(*conditions, raise_exception=raise_exception)
+        return group
 
     async def get_groups(self, *conditions: ColumnElement[bool]) -> list[Group]:
-        users = await self.socket.get_db_objs(*conditions)
-        return users
+        groups = await self.socket.get_db_objs(*conditions)
+        return groups
 
     async def get_column_vals(self, field: InstrumentedAttribute, *conditions: ColumnElement[bool]) -> list:
         data = await self.socket.get_column_vals(field, *conditions)
@@ -57,6 +57,6 @@ class GroupService(Service):
             if user in group.users:
                 idx = group.users.index(user)
                 deleted_user = group.users.pop(idx)
-                excluded.append(user)
+                excluded.append(deleted_user)
         await self.socket.force_commit()
-        return deleted_user
+        return excluded

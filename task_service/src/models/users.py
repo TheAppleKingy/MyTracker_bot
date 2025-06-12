@@ -19,7 +19,8 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(default=False)
     groups: Mapped[list['Group']] = relationship(secondary=users_groups,
                                                  back_populates='users', lazy='selectin', passive_deletes=True)
-    tasks: Mapped[list[int]] = mapped_column(JSONB, default=list)
+    tasks: Mapped[list['Task']] = relationship(
+        back_populates='user', cascade='all, delete-orphan', lazy='selectin')
 
     def set_password(self):
         self.password = hash_password(self.password)

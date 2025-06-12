@@ -19,7 +19,9 @@ class Task(Base):
     done: Mapped[bool] = mapped_column(default=False)
     subtasks: Mapped[list['SubTask']] = relationship(
         back_populates='task', cascade='all, delete-orphan', lazy='selectin')
-    user: Mapped[int] = mapped_column()
+    user: Mapped['User'] = relationship(
+        back_populates='tasks', lazy='selectin')
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
 
     @validates('pass_date')
     def validate_pass_date(self, key, value):
@@ -40,7 +42,7 @@ class SubTask(Base):
         DateTime(timezone=True), nullable=True)
     done: Mapped[bool] = mapped_column(default=False)
     task: Mapped["Task"] = relationship(
-        back_populates='subtasks', lazy='joined')
+        back_populates='subtasks', lazy='selectin')
     task_id: Mapped[int] = mapped_column(ForeignKey('tasks.id'))
 
     @validates('pass_date')

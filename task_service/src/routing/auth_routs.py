@@ -3,7 +3,7 @@ from fastapi import Depends, status, APIRouter
 from dependencies import jwt_authentication, get_user_service
 from security.authentication import login_user, get_tokens_for_user
 from models.users import User
-from schemas.users_schemas import UserCreateSchema
+from schemas.users_schemas import UserCreateSchema, UserViewSchema
 from service.user_service import UserService
 from . import response_cookies
 
@@ -29,10 +29,11 @@ async def logout(user: User = Depends(jwt_authentication())):
     return response
 
 
-@profile_router.post('/registration', response_model=UserCreateSchema)
+@profile_router.post('/registration', response_model=UserViewSchema)
 async def registration(reg_data: UserCreateSchema, user_service: UserService = Depends(get_user_service)):
     user = await user_service.create_user(**reg_data.model_dump())
     user.set_password()
+    await user_service.socket.force_commit()
     return user
 
 

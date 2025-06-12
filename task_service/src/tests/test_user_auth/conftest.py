@@ -79,6 +79,13 @@ def user_service(session):
     return user_service
 
 
+@pytest.fixture
+def group_service(session):
+    socket = SocketFactory.get_socket(Group, session)
+    group_service = GroupServiceFactory.get_service(socket)
+    return group_service
+
+
 @pytest_asyncio.fixture
 async def admin_user(user_service: UserService):
     return await user_service.get_user(User.tg_name == 'admin')

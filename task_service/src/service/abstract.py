@@ -1,10 +1,9 @@
-from typing import TypeVar, Sequence
+from typing import TypeVar, Sequence, Any, Callable
 
 from fastapi import status
 from fastapi.exceptions import HTTPException
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.sql.expression import ColumnElement
-
 from repository.socket import Socket
 
 
@@ -51,20 +50,23 @@ def extract_field(model: T, field_name: str) -> InstrumentedAttribute:
     return field
 
 
-async def m2m_validator(objects_data: list[dict], socket: Socket, identificator: str = 'id'):
-    values = [data[identificator] for data in objects_data]
+def extract_service_method(service: Service, method_name: str) -> Callable:
+    method = getattr(service, method_name, None)
+    if not method:
+        raise AttributeError(
+            {'error': f'Service {service} has no method with name "{method_name}"'})
+    return method
 
-    if len(values) == len(set(values)):
-        model = socket.model
-        field = extract_field(model, identificator)
-        identificators_vals = await socket.get_column_vals(field, field.in_(values))
-        if len(identificators_vals) != len(values):
-            existing_values = set(identificators_vals)
-            missing_values = set(values) - existing_values
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail=f'Theese {identificator}s: ({", ".join(missing_values)}) - do not exist')
-    else:
+
+async def m2m_field_validator(objs_data_to_add: list[Any], service: Service, get_method_name: str, identificator: str = 'id'):
+    """Use this func when u have to get objs for add to m2m relationship from got list of identificators from client"""
+    model = service.socket.model
+    id_field = extract_field(model, identificator)
+    get_method = extract_service_method(service, get_method_name)
+    objs_to_add = await get_method(id_field.in_(objs_data_to_add))
+    if len(objs_to_add) != len(objs_data_to_add):
+        existing = {getattr(obj, identificator) for obj in objs_to_add}
+        not_existing = list(map(str, set(objs_data_to_add) - existing))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=f'{identificator}s must be unique')
-
-    return identificators_vals
+                            detail=f'Trying add m2m objects with not existing {identificator}s: {','.join(not_existing)}')
+    return objs_to_add
