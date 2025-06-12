@@ -32,8 +32,6 @@ async def logout(user: User = Depends(jwt_authentication())):
 @profile_router.post('/registration', response_model=UserViewSchema)
 async def registration(reg_data: UserCreateSchema, user_service: UserService = Depends(get_user_service)):
     user = await user_service.create_user(**reg_data.model_dump())
-    user.set_password()
-    await user_service.socket.force_commit()
     return user
 
 
