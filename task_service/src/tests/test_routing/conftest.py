@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db_session
 from app import app
-from security.authentication import access, refresh
+from security.authentication import get_token_for_user
 from models.users import User, Group
 from service.user_service import UserService
 
@@ -22,17 +22,13 @@ async def client(session: AsyncSession):
 
 @pytest.fixture
 def admin_client(client: AsyncClient, admin_user: User):
-    access_token = access({'user_id': admin_user.id})
-    refresh_token = refresh({'user_id': admin_user.id})
-    client.cookies.set('access', access_token, domain='test.local')
-    client.cookies.set('refresh', refresh_token, domain='test.local')
+    token = get_token_for_user(admin_user)
+    client.cookies.set('token', token, domain='test.local')
     return client
 
 
 @pytest.fixture
 def simple_client(client: AsyncClient, simple_user: User):
-    access_token = access({'user_id': simple_user.id})
-    refresh_token = refresh({'user_id': simple_user.id})
-    client.cookies.set('access', access_token, domain='test.local')
-    client.cookies.set('refresh', refresh_token, domain='test.local')
+    token = get_token_for_user(simple_user)
+    client.cookies.set('token', token, domain='test.local')
     return client

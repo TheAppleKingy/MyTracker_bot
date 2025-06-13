@@ -1,7 +1,7 @@
 from fastapi import Depends, status, APIRouter
 
-from dependencies import jwt_authentication, get_user_service
-from security.authentication import login_user, get_tokens_for_user
+from dependencies import jwt_authentication, get_user_service, authenticate
+from security.authentication import login_user, get_token_for_user
 from models.users import User
 from schemas.users_schemas import UserCreateSchema, UserViewSchema
 from service.user_service import UserService
@@ -16,16 +16,16 @@ profile_router = APIRouter(
 
 @profile_router.post('/login')
 async def login(user: User = Depends(login_user)):
-    access_token, refresh_token = get_tokens_for_user(user)
+    token = get_token_for_user(user)
     response = response_cookies({'detail': 'logged in'}, status.HTTP_200_OK, {
-                                'access': access_token, 'refresh': refresh_token})
+                                'token': token})
     return response
 
 
 @profile_router.post('/logout')
-async def logout(user: User = Depends(jwt_authentication())):
-    response = response_cookies({'detail': 'logged out'}, status.HTTP_200_OK, cookies_data=[
-                                'access', 'refresh'], delete=True)
+async def logout(user: User = Depends(authenticate)):
+    response = response_cookies(
+        {'detail': 'logged out'}, status.HTTP_200_OK, cookies_data=['token'], delete=True)
     return response
 
 
@@ -33,11 +33,3 @@ async def logout(user: User = Depends(jwt_authentication())):
 async def registration(reg_data: UserCreateSchema, user_service: UserService = Depends(get_user_service)):
     user = await user_service.create_obj(**reg_data.model_dump())
     return user
-
-
-@profile_router.get('/token')
-async def token(user: User = Depends(jwt_authentication('refresh'))):
-    access_token, refresh_token = get_tokens_for_user(user)
-    response = response_cookies(
-        cookies_data={'access': access_token, 'refresh': refresh_token})
-    return response

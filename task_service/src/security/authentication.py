@@ -3,7 +3,7 @@ import jwt
 import config
 
 from datetime import datetime, timezone, timedelta
-from typing import Optional, Literal
+from typing import Optional
 
 from sqlalchemy.exc import NoResultFound
 from fastapi import HTTPException, Depends, status
@@ -26,20 +26,12 @@ def decode(token: str) -> dict:
     return payload
 
 
-def refresh(payload: dict):
-    """setup and return refresh token"""
-    payload.update({'type': 'refresh', 'exp': datetime.now(
-        timezone.utc) + timedelta(seconds=int(config.REFRESH_EXPIRE_TIME))})
-    refresh = encode(payload)
-    return refresh
-
-
-def access(payload: dict):
-    """setup and return access token"""
-    payload.update({'type': 'access', 'exp': datetime.now(
-        timezone.utc) + timedelta(seconds=int(config.ACCESS_EXPIRE_TIME))})
-    access = encode(payload)
-    return access
+def get_token(payload: dict):
+    """setup and return token"""
+    payload.update({'exp': datetime.now(
+        timezone.utc) + timedelta(seconds=int(config.TOKEN_EXPIRE_TIME))})
+    token = encode(payload)
+    return token
 
 
 def validate_token(token: Optional[str], fields_required: Optional[list[str]] = None) -> dict:
@@ -58,11 +50,10 @@ def validate_token(token: Optional[str], fields_required: Optional[list[str]] = 
     return decoded
 
 
-def get_tokens_for_user(user: User):
+def get_token_for_user(user: User):
     payload = {'user_id': user.id}
-    access_token = access(payload)
-    refresh_token = refresh(payload)
-    return access_token, refresh_token
+    token = get_token(payload)
+    return token
 
 
 async def login_user(login_data: LoginSchema, user_service: UserService = Depends(get_user_service)) -> User:
@@ -94,17 +85,13 @@ class Auther:
 
 
 class JWTAuther(Auther):
-    async def auth(self, token: str, token_type: Literal['refresh', 'access']) -> User:
-        payload = self.extract_payload(token, token_type)
+    async def auth(self, token: str) -> User:
+        payload = self.extract_payload(token)
         user = await self.get_user(payload)
         return user
 
-    def extract_payload(self, token: Optional[str], required_type: str) -> Optional[dict]:
-        payload = validate_token(token, ['user_id', 'type'])
-        got_type = payload['type']
-        if got_type != required_type:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail={
-                                'error': 'Wrong token type'})
+    def extract_payload(self, token: Optional[str]) -> Optional[dict]:
+        payload = validate_token(token, ['user_id'])
         return payload
 
     async def get_user(self, decoded_token: dict):
