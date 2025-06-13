@@ -2,6 +2,7 @@ import pytest
 import pytest_asyncio
 
 from httpx import AsyncClient, ASGITransport
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db_session
@@ -9,29 +10,6 @@ from app import app
 from security.authentication import access, refresh
 from models.users import User, Group
 from service.user_service import UserService
-
-
-@pytest_asyncio.fixture(autouse=True)
-async def setup(session: AsyncSession):
-    admin_group = Group(title='Admin')
-    group = Group(title='Other')
-    session.add_all([admin_group, group])
-    admin = User(tg_name='admin', email='admin@mail.ru',
-                 password='test_password', groups=[admin_group])
-    simple_user = User(tg_name='simple_user', email='simple@mail.ru',
-                       password='test_password', groups=[group])
-    session.add_all([admin, simple_user])
-    await session.commit()
-
-
-@pytest_asyncio.fixture
-async def admin_user(user_service: UserService):
-    return await user_service.get_user(User.tg_name == 'admin')
-
-
-@pytest_asyncio.fixture
-async def simple_user(user_service: UserService):
-    return await user_service.get_user(User.tg_name == 'simple_user')
 
 
 @pytest_asyncio.fixture

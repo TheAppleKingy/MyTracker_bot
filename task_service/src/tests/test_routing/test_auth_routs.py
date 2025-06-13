@@ -1,18 +1,13 @@
 import pytest
 import httpx
-import asyncio
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from freezegun import freeze_time
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from models.users import User
-from models.associations import users_groups
 from service.user_service import UserService
-from schemas.users_schemas import UserViewSchema, UserUpdateSchema
+from schemas.users_schemas import UserViewSchema
 from security.authentication import decode
 
 
@@ -49,7 +44,7 @@ async def test_registration(simple_client: httpx.AsyncClient, user_service: User
     }
     response = await simple_client.post(urls['profile']['registration'], json=data)
     assert response.status_code == 200
-    registered = await user_service.get_user(User.tg_name == data['tg_name'])
+    registered = await user_service.get_obj(User.tg_name == data['tg_name'])
     assert registered is not None
     expected = UserViewSchema.model_validate(
         registered, from_attributes=True).model_dump()
@@ -83,7 +78,7 @@ async def test_registration_fail(simple_client: httpx.AsyncClient, user_service:
             }
         ]
     }
-    assert len(await user_service.get_users()) == 2
+    assert len(await user_service.get_objs()) == 2
 
 
 @pytest_mark_asyncio
@@ -93,7 +88,7 @@ async def test_login(client: httpx.AsyncClient, user_service: UserService):
         'email': 'user@mail.ru',
         'password': 'test-password'
     }
-    user = await user_service.create_user(**data)
+    user = await user_service.create_obj(**data)
     assert client.cookies.get('access') is None
     assert client.cookies.get('refresh') is None
     response = await client.post(urls['profile']['login'], json={'email': data['email'], 'password': data['password']})

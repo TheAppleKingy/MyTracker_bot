@@ -1,4 +1,5 @@
 from typing import Callable, TypeVar, Sequence
+from abc import ABC, abstractmethod
 
 from sqlalchemy import select, update, delete, insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,34 +22,40 @@ def commitable(commitable_method: Callable):
     return commit
 
 
-class Socket:
+class Socket(ABC):
     def __init__(self, model: T, session: AsyncSession):
         self.model: T = model
         self.session = session
 
-    async def get_db_obj(self, *conditions: ColumnElement[bool], raise_exception: bool = False) -> T:
-        pass
+    @abstractmethod
+    async def get_db_obj(
+        self, *conditions: ColumnElement[bool], raise_exception: bool = False) -> T: ...
 
-    async def get_db_objs(self, *conditions: ColumnElement[bool]) -> list[T]:
-        pass
+    @abstractmethod
+    async def get_db_objs(
+        self, *conditions: ColumnElement[bool]) -> list[T]: ...
 
-    async def get_column_vals(self, field: InstrumentedAttribute, *conditions: ColumnElement[bool]):
-        pass
+    @abstractmethod
+    async def get_column_vals(
+        self, field: InstrumentedAttribute, *conditions: ColumnElement[bool]) -> list: ...
 
-    async def get_columns_vals(self, fields: Sequence[InstrumentedAttribute], *conditions: ColumnElement[bool]):
-        pass
+    @abstractmethod
+    async def get_columns_vals(self, fields: Sequence[InstrumentedAttribute],
+                               *conditions: ColumnElement[bool], mapped: bool = False) -> list[tuple]: ...
 
-    async def delete_db_objs(self, *conditions: ColumnElement[bool]):
-        pass
+    @abstractmethod
+    async def delete_db_objs(
+        self, *conditions: ColumnElement[bool]) -> list[T]: ...
 
-    async def update_db_objs(self, *conditions: ColumnElement[bool], **kwargs):
-        pass
+    @abstractmethod
+    async def update_db_objs(
+        self, *conditions: ColumnElement[bool], **kwargs) -> list[T]: ...
 
-    async def create_db_obj(self, **kwargs) -> T:
-        pass
+    @abstractmethod
+    async def create_db_obj(self, **kwargs) -> T: ...
 
-    async def create_db_objs(self, table_raws: Sequence[dict]) -> list[T]:
-        pass
+    @abstractmethod
+    async def create_db_objs(self, table_raws: Sequence[dict]) -> list[T]: ...
 
     async def force_commit(self):
         await self.session.commit()
@@ -70,12 +77,12 @@ class DBSocket(Socket):
         db_resp = await self.session.execute(query)
         return db_resp.scalars().all()
 
-    async def get_column_vals(self, field: InstrumentedAttribute, *conditions: ColumnElement[bool]):
+    async def get_column_vals(self, field: InstrumentedAttribute, *conditions: ColumnElement[bool]) -> list:
         query = select(field).where(*conditions)
         db_resp = await self.session.execute(query)
         return db_resp.scalars().all()
 
-    async def get_columns_vals(self, fields: Sequence[InstrumentedAttribute], *conditions: ColumnElement[bool], mapped: bool = False):
+    async def get_columns_vals(self, fields: Sequence[InstrumentedAttribute], *conditions: ColumnElement[bool], mapped: bool = False) -> list[tuple]:
         assert len(fields) >= 2, 'Minimal count of fields - 2'
         query = select(*fields).where(*conditions)
         db_resp = await self.session.execute(query)
@@ -86,14 +93,14 @@ class DBSocket(Socket):
         return res
 
     @commitable
-    async def delete_db_objs(self, *conditions: ColumnElement[bool]):
+    async def delete_db_objs(self, *conditions: ColumnElement[bool]) -> list[T]:
         """commitable method"""
         query = delete(self.model).where(*conditions).returning(self.model)
         res = await self.session.execute(query)
         return res.scalars().all()
 
     @commitable
-    async def update_db_objs(self, *conditions: ColumnElement[bool], **kwargs):
+    async def update_db_objs(self, *conditions: ColumnElement[bool], **kwargs) -> list[T]:
         """commitable method"""
         query = update(self.model).where(
             *conditions).values(**kwargs).returning(self.model)

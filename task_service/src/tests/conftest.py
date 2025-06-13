@@ -3,7 +3,8 @@ import pytest_asyncio
 import os
 import asyncpg
 
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncEngine
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncEngine, AsyncSession
 
 from config import FORMATTED_DATABASE_URL, TEST_DATABASE_URL
 from models.base import Base
@@ -52,14 +53,43 @@ async def session(engine: AsyncEngine):
 
 
 @pytest.fixture
-def user_service(session):
+def user_service(session: AsyncSession):
     socket = SocketFactory.get_socket(User, session)
     user_service = UserServiceFactory.get_service(socket)
     return user_service
 
 
 @pytest.fixture
-def group_service(session):
+def group_service(session: AsyncSession):
     socket = SocketFactory.get_socket(Group, session)
     group_service = GroupServiceFactory.get_service(socket)
     return group_service
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def setup(session: AsyncSession):
+    admin_group = Group(title='Admin')
+    group = Group(title='Other')
+    session.add_all([admin_group, group])
+    admin = User(tg_name='admin', email='admin@mail.ru',
+                 password='test_password', groups=[admin_group])
+    simple_user = User(tg_name='simple_user', email='simple@mail.ru',
+                       password='test_password', groups=[group])
+    session.add_all([admin, simple_user])
+    await session.commit()
+
+
+@pytest_asyncio.fixture
+async def admin_user(session: AsyncSession):
+    query = select(User).where(User.tg_name == 'admin')
+    res = await session.execute(query)
+    user = res.scalar_one_or_none()
+    return user
+
+
+@pytest_asyncio.fixture
+async def simple_user(session: AsyncSession):
+    query = select(User).where(User.tg_name == 'simple_user')
+    res = await session.execute(query)
+    user = res.scalar_one_or_none()
+    return user

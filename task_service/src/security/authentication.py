@@ -67,7 +67,7 @@ def get_tokens_for_user(user: User):
 
 async def login_user(login_data: LoginSchema, user_service: UserService = Depends(get_user_service)) -> User:
     email, password = login_data.email, login_data.password
-    user = await user_service.get_user(User.email == email)
+    user = await user_service.get_obj(User.email == email)
     if not user:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, {
                             'error': 'user with this email not found'})
@@ -110,7 +110,7 @@ class JWTAuther(Auther):
     async def get_user(self, decoded_token: dict):
         user_id = decoded_token['user_id']
         try:
-            user = await self.user_service.get_user(User.id == user_id, raise_exception=True)
+            user = await self.user_service.get_obj(User.id == user_id, raise_exception=True)
         except NoResultFound:
             raise Exception(
                 {'error': 'Not existing user_id was set in token payload. Security threat!'})

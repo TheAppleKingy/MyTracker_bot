@@ -10,38 +10,6 @@ from .abstract import Service
 class GroupService(Service):
     _target_model = Group
 
-    async def get_group(self, *conditions: ColumnElement[bool], raise_exception: bool = False) -> Group:
-        group = await self.socket.get_db_obj(*conditions, raise_exception=raise_exception)
-        return group
-
-    async def get_groups(self, *conditions: ColumnElement[bool]) -> list[Group]:
-        groups = await self.socket.get_db_objs(*conditions)
-        return groups
-
-    async def get_column_vals(self, field: InstrumentedAttribute, *conditions: ColumnElement[bool]) -> list:
-        data = await self.socket.get_column_vals(field, *conditions)
-        return data
-
-    async def get_columns_vals(self, fields: Sequence[InstrumentedAttribute], *conditions: ColumnElement[bool], mapped: bool = False) -> list[tuple]:
-        data = await self.socket.get_columns_vals(fields, *conditions, mapped)
-        return data
-
-    async def delete_group(self, *conditions: ColumnElement[bool]) -> list[Group]:
-        deleted = await self.socket.delete_db_objs(*conditions)
-        return deleted
-
-    async def update_groups(self, *conditions: ColumnElement[bool], **kwargs) -> list[Group]:
-        updated = await self.socket.update_db_objs(*conditions, **kwargs)
-        return updated
-
-    async def create_group(self, **kwargs) -> Group:
-        created = await self.socket.create_db_obj(**kwargs)
-        return created
-
-    async def create_group(self, table_raws: Sequence[dict]) -> list[Group]:
-        created = await self.socket.create_db_objs(table_raws)
-        return created
-
     async def add_users(self, group: Group, users: Sequence[User]) -> list[User]:
         to_add = []
         for user in users:
