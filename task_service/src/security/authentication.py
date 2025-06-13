@@ -71,7 +71,7 @@ async def login_user(login_data: LoginSchema, user_service: UserService = Depend
     if not user:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, {
                             'error': 'user with this email not found'})
-    if not user.check_password(password):
+    if not user_service.check_password(user, password):
         raise HTTPException(status.HTTP_400_BAD_REQUEST,
                             {'error': 'wrong password'})
     return user

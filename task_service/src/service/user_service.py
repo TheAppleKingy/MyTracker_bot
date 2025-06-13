@@ -4,6 +4,7 @@ from sqlalchemy.sql.expression import ColumnElement
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 
 from models.users import User
+from security.password_utils import hash_password, check_password, is_hashed
 from .abstract import Service
 
 
@@ -35,9 +36,26 @@ class UserService(Service):
         return updated
 
     async def create_user(self, **kwargs) -> User:
+        raw_password = kwargs.pop('password')
+        hashed = hash_password(raw_password)
+        kwargs.setdefault('password', hashed)
         created = await self.socket.create_db_obj(**kwargs)
         return created
 
     async def create_users(self, table_raws: Sequence[dict]) -> list[User]:
+        for raw in table_raws:
+            raw_password = raw.pop('password')
+            hashed = hash_password(raw_password)
+            raw.setdefault('password', hashed)
         created = await self.socket.create_db_objs(table_raws)
         return created
+
+    def check_password(self, user: User, password: str):
+        hashed = is_hashed(user.password)
+        if hashed:
+            return check_password(password, user.password)
+        return False
+
+    async def set_password(self, user: User, password: str):
+        user.password = hash_password(password)
+        await self.socket.force_commit()

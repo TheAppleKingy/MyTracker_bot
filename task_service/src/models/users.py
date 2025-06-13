@@ -22,13 +22,6 @@ class User(Base):
     tasks: Mapped[list['Task']] = relationship(
         back_populates='user', cascade='all, delete-orphan', lazy='selectin')
 
-    def set_password(self):
-        self.password = hash_password(self.password)
-
-    def check_password(self, verifiable: str):
-        hashed_password = self.password
-        return check_password(verifiable, hashed_password)
-
 
 class Group(Base):
     __tablename__ = 'groups'
