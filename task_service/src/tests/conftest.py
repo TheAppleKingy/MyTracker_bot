@@ -80,6 +80,14 @@ async def setup(session: AsyncSession):
 
 
 @pytest_asyncio.fixture
+async def admin_group(session: AsyncSession):
+    query = select(Group).where(Group.title == 'Admin')
+    res = await session.execute(query)
+    group = res.scalar_one_or_none()
+    return group
+
+
+@pytest_asyncio.fixture
 async def admin_user(session: AsyncSession):
     query = select(User).where(User.tg_name == 'admin')
     res = await session.execute(query)

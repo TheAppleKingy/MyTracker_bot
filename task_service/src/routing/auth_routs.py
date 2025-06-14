@@ -1,6 +1,6 @@
 from fastapi import Depends, status, APIRouter
 
-from dependencies import jwt_authentication, get_user_service, authenticate
+from dependencies import get_user_service, authenticate
 from security.authentication import login_user, get_token_for_user
 from models.users import User
 from schemas.users_schemas import UserCreateSchema, UserViewSchema

@@ -1,13 +1,10 @@
 from typing import Sequence
 
-from sqlalchemy.sql.expression import ColumnElement
-from sqlalchemy.orm.attributes import InstrumentedAttribute
-
 from models.users import User, Group
 from .abstract import Service
 
 
-class GroupService(Service):
+class GroupService(Service[Group]):
     _target_model = Group
 
     async def add_users(self, group: Group, users: Sequence[User]) -> list[User]:

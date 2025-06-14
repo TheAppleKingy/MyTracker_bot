@@ -1,5 +1,3 @@
-from typing import Literal
-
 from fastapi import Depends, Cookie
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,17 +28,6 @@ def get_group_service(socket: DBSocket = Depends(get_socket(Group))):
 async def authenticate(token: str = Cookie(default=None, include_in_schema=False), user_service: UserService = Depends(get_user_service)):
     from security.authentication import JWTAuther
     return await JWTAuther(user_service).auth(token)
-
-
-def jwt_authentication(type: Literal['refresh', 'access'] = 'access'):
-    async def authenticate(access: str = Cookie(default=None, include_in_schema=False), refresh: str = Cookie(default=None, include_in_schema=False), user_service: UserService = Depends(get_user_service)):
-        from security.authentication import JWTAuther
-        token_map = {
-            'access': access,
-            'refresh': refresh
-        }
-        return await JWTAuther(user_service).auth(token_map[type], type)
-    return authenticate
 
 
 def get_user_allowed_by_group(allowed_group: str):

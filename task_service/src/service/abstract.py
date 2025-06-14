@@ -1,4 +1,4 @@
-from typing import TypeVar, Sequence, Any, Callable
+from typing import TypeVar, Sequence, Any, Callable, Generic
 
 from fastapi import status
 from fastapi.exceptions import HTTPException
@@ -10,14 +10,14 @@ from repository.socket import Socket
 T = TypeVar('T')
 
 
-class Service:
+class Service(Generic[T]):
     _target_model: T
 
-    def __init__(self, socket: Socket):
+    def __init__(self, socket: Socket[T]):
         assert socket.model is self._target_model, f'try to init {self.__class__.__name__} with inappropriate model in socket. got model: {socket.model}'
         self.socket = socket
 
-    async def get_obj(self, *conditions: ColumnElement[bool], raise_exception: bool = False) -> T:
+    async def get_obj(self, *conditions: ColumnElement[bool], raise_exception: bool = False):
         return await self.socket.get_db_obj(*conditions, raise_exception=raise_exception)
 
     async def get_objs(self, *conditions: ColumnElement[bool]) -> list[T]:
@@ -58,7 +58,7 @@ def extract_service_method(service: Service, method_name: str) -> Callable:
     return method
 
 
-async def m2m_field_validator(objs_data_to_add: list[Any], service: Service, identificator: str = 'id'):
+async def m2m_field_validator(objs_data_to_add: list[Any], service: Service[T], identificator: str = 'id'):
     """Use this func when u have to get objs for add to m2m relationship from got list of identificators from client"""
     model = service.socket.model
     id_field = extract_field(model, identificator)

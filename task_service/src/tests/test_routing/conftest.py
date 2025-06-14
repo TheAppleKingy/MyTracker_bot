@@ -2,14 +2,12 @@ import pytest
 import pytest_asyncio
 
 from httpx import AsyncClient, ASGITransport
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db_session
 from app import app
 from security.authentication import get_token_for_user
-from models.users import User, Group
-from service.user_service import UserService
+from models.users import User
 
 
 @pytest_asyncio.fixture

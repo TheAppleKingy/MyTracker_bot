@@ -1,24 +1,21 @@
 from typing import Sequence
 
-from sqlalchemy.sql.expression import ColumnElement
-from sqlalchemy.orm.attributes import InstrumentedAttribute
-
 from models.users import User
 from security.password_utils import hash_password, check_password, is_hashed
 from .abstract import Service
 
 
-class UserService(Service):
+class UserService(Service[User]):
     _target_model = User
 
-    async def create_obj(self, commit: bool = True, **kwargs) -> User:
+    async def create_obj(self, commit: bool = True, **kwargs):
         raw_password = kwargs.pop('password')
         hashed = hash_password(raw_password)
         kwargs.setdefault('password', hashed)
         created = await super().create_obj(commit=commit, **kwargs)
         return created
 
-    async def create_objs(self, table_raws: Sequence[dict], commit: bool = True) -> list[User]:
+    async def create_objs(self, table_raws: Sequence[dict], commit: bool = True):
         for raw in table_raws:
             raw_password = raw.pop('password')
             hashed = hash_password(raw_password)

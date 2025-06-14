@@ -1,4 +1,4 @@
-from typing import Callable, TypeVar, Sequence
+from typing import Callable, TypeVar, Sequence, Generic
 from abc import ABC, abstractmethod
 
 from sqlalchemy import select, update, delete, insert
@@ -22,7 +22,7 @@ def commitable(commitable_method: Callable):
     return commit
 
 
-class Socket(ABC):
+class Socket(ABC, Generic[T]):
     def __init__(self, model: T, session: AsyncSession):
         self.model: T = model
         self.session = session
@@ -64,7 +64,7 @@ class Socket(ABC):
         await self.session.refresh(obj)
 
 
-class DBSocket(Socket):
+class DBSocket(Socket[T]):
     async def get_db_obj(self, *conditions: ColumnElement[bool], raise_exception: bool = False) -> T:
         query = select(self.model).where(*conditions)
         db_resp = await self.session.execute(query)
