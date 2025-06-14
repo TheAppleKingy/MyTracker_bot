@@ -1,18 +1,13 @@
 import pytest
 import httpx
-import asyncio
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from freezegun import freeze_time
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from models.users import User
-from models.associations import users_groups
 from service.user_service import UserService
-from schemas.users_schemas import UserViewSchema, UserUpdateSchema
+from schemas.users_schemas import UserViewSchema
 from security.authentication import decode
 
 
@@ -21,8 +16,7 @@ urls = {
     'profile': {
         'login': '/api/profile/login',
         'logout': '/api/profile/logout',
-        'registration': '/api/profile/registration',
-        'token': '/api/profile/token'
+        'registration': '/api/profile/registration'
     },
     'user_api': {
         'get_users': '/api/users',
@@ -49,7 +43,7 @@ async def test_registration(simple_client: httpx.AsyncClient, user_service: User
     }
     response = await simple_client.post(urls['profile']['registration'], json=data)
     assert response.status_code == 200
-    registered = await user_service.get_user(User.tg_name == data['tg_name'])
+    registered = await user_service.get_obj(User.tg_name == data['tg_name'])
     assert registered is not None
     expected = UserViewSchema.model_validate(
         registered, from_attributes=True).model_dump()
@@ -83,7 +77,7 @@ async def test_registration_fail(simple_client: httpx.AsyncClient, user_service:
             }
         ]
     }
-    assert len(await user_service.get_users()) == 2
+    assert len(await user_service.get_objs()) == 2
 
 
 @pytest_mark_asyncio
@@ -93,22 +87,15 @@ async def test_login(client: httpx.AsyncClient, user_service: UserService):
         'email': 'user@mail.ru',
         'password': 'test-password'
     }
-    user = await user_service.create_user(**data)
-    assert client.cookies.get('access') is None
-    assert client.cookies.get('refresh') is None
+    user = await user_service.create_obj(**data)
+    assert client.cookies.get('token') is None
     response = await client.post(urls['profile']['login'], json={'email': data['email'], 'password': data['password']})
     assert response.status_code == 200
     assert response.json() == {'detail': 'logged in'}
-    assert client.cookies.get('access') is not None
-    assert client.cookies.get('refresh') is not None
-    access_token = client.cookies.get('access')
-    refresh_token = client.cookies.get('refresh')
-    access_payload = decode(access_token)
-    refresh_payload = decode(refresh_token)
-    assert access_payload['user_id'] == user.id
-    assert access_payload['type'] == 'access'
-    assert refresh_payload['user_id'] == user.id
-    assert refresh_payload['type'] == 'refresh'
+    assert client.cookies.get('token') is not None
+    token = client.cookies.get('token')
+    payload = decode(token)
+    assert payload['user_id'] == user.id
 
 
 @pytest_mark_asyncio
@@ -148,10 +135,8 @@ async def test_logout(simple_client: httpx.AsyncClient):
     assert response.json() == {
         'detail': 'logged out'
     }
-    access = simple_client.cookies.get('access', None)
-    refresh = simple_client.cookies.get('refresh', None)
-    assert access is None
-    assert refresh is None
+    token = simple_client.cookies.get('token', None)
+    assert token is None
 
 
 @pytest_mark_asyncio
@@ -163,24 +148,3 @@ async def test_logout_fail(client: httpx.AsyncClient):
             'error': 'token was not provide'
         }
     }
-
-
-@pytest_mark_asyncio
-async def test_refresh_token(simple_client: httpx.AsyncClient, simple_user: User):
-    old_access = simple_client.cookies.get('access')
-    old_refresh = simple_client.cookies.get('refresh')
-    with freeze_time(datetime.now()+timedelta(minutes=2)):
-        response = await simple_client.get(urls['profile']['token'])
-    assert response.status_code == 204
-    new_access = simple_client.cookies.get('access', None)
-    new_refresh = simple_client.cookies.get('refresh', None)
-    assert new_access is not None
-    assert new_refresh is not None
-    assert new_access != old_access
-    assert new_refresh != old_refresh
-    new_access_payload = decode(new_access)
-    new_refresh_payload = decode(new_refresh)
-    assert new_access_payload['user_id'] == simple_user.id
-    assert new_access_payload['type'] == 'access'
-    assert new_refresh_payload['user_id'] == simple_user.id
-    assert new_refresh_payload['type'] == 'refresh'

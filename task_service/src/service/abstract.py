@@ -1,4 +1,4 @@
-from typing import TypeVar, Sequence, Any, Callable
+from typing import TypeVar, Sequence, Any, Callable, Generic
 
 from fastapi import status
 from fastapi.exceptions import HTTPException
@@ -10,36 +10,36 @@ from repository.socket import Socket
 T = TypeVar('T')
 
 
-class Service:
+class Service(Generic[T]):
     _target_model: T
 
-    def __init__(self, socket: Socket):
+    def __init__(self, socket: Socket[T]):
         assert socket.model is self._target_model, f'try to init {self.__class__.__name__} with inappropriate model in socket. got model: {socket.model}'
         self.socket = socket
 
-    async def get_obj(self, *conditions: ColumnElement[bool], raise_exception: bool = False) -> T:
-        pass
+    async def get_obj(self, *conditions: ColumnElement[bool], raise_exception: bool = False):
+        return await self.socket.get_db_obj(*conditions, raise_exception=raise_exception)
 
     async def get_objs(self, *conditions: ColumnElement[bool]) -> list[T]:
-        pass
+        return await self.socket.get_db_objs(*conditions)
 
     async def get_column_vals(self, field: InstrumentedAttribute, *conditions: ColumnElement[bool]):
-        pass
+        return await self.socket.get_column_vals(field, *conditions)
 
     async def get_columns_vals(self, fields: Sequence[InstrumentedAttribute], *conditions: ColumnElement[bool]):
-        pass
+        return await self.socket.get_columns_vals(fields, *conditions)
 
-    async def delete(self, *conditions: ColumnElement[bool]):
-        pass
+    async def delete(self, *conditions: ColumnElement[bool], commit: bool = True) -> list[T]:
+        return await self.socket.delete_db_objs(*conditions, commit=commit)
 
-    async def update(self, *conditions: ColumnElement[bool], **kwargs):
-        pass
+    async def update(self, *conditions: ColumnElement[bool], commit: bool = True, **kwargs) -> list[T]:
+        return await self.socket.update_db_objs(*conditions, commit=commit, **kwargs)
 
-    async def create_obj(self, **kwargs) -> T:
-        pass
+    async def create_obj(self, commit: bool = True, **kwargs) -> T:
+        return await self.socket.create_db_obj(commit=commit, **kwargs)
 
-    async def create_objs(self, table_raws: Sequence[dict]) -> list[T]:
-        pass
+    async def create_objs(self, table_raws: Sequence[dict], commit: bool = True) -> list[T]:
+        return await self.socket.create_db_objs(table_raws, commit=commit)
 
 
 def extract_field(model: T, field_name: str) -> InstrumentedAttribute:
@@ -58,12 +58,11 @@ def extract_service_method(service: Service, method_name: str) -> Callable:
     return method
 
 
-async def m2m_field_validator(objs_data_to_add: list[Any], service: Service, get_method_name: str, identificator: str = 'id'):
+async def m2m_field_validator(objs_data_to_add: list[Any], service: Service[T], identificator: str = 'id'):
     """Use this func when u have to get objs for add to m2m relationship from got list of identificators from client"""
     model = service.socket.model
     id_field = extract_field(model, identificator)
-    get_method = extract_service_method(service, get_method_name)
-    objs_to_add = await get_method(id_field.in_(objs_data_to_add))
+    objs_to_add = await service.get_objs(id_field.in_(objs_data_to_add))
     if len(objs_to_add) != len(objs_data_to_add):
         existing = {getattr(obj, identificator) for obj in objs_to_add}
         not_existing = list(map(str, set(objs_data_to_add) - existing))

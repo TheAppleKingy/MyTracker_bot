@@ -15,7 +15,7 @@ pytest_mark_asyncio = pytest.mark.asyncio
 async def test_get_groups(admin_client: httpx.AsyncClient, group_service: GroupService):
     response = await admin_client.get('/api/groups')
     assert response.status_code == 200
-    groups = await group_service.get_groups(Group.title.in_(['Admin', 'Other']))
+    groups = await group_service.get_objs(Group.title.in_(['Admin', 'Other']))
     expected = [GroupVeiwSchema.model_validate(
         obj, from_attributes=True).model_dump() for obj in groups]
     assert response.json() == expected
@@ -28,7 +28,7 @@ async def test_add_users_into_group(admin_client: httpx.AsyncClient, simple_user
             simple_user.id, simple_user.id
         ]
     }
-    admin_gr = await group_service.get_group(Group.title == 'Admin')
+    admin_gr = await group_service.get_obj(Group.title == 'Admin')
     assert admin_gr.users == [admin_user]
     response = await admin_client.patch('/api/groups/{}/add_users'.format(admin_gr.id), json=data)
     assert response.status_code == 200
@@ -45,7 +45,7 @@ async def test_add_users_into_group_fail(admin_client: httpx.AsyncClient, simple
             admin_user.id+simple_user.id, admin_user.id+simple_user.id+2
         ]
     }
-    admin_gr = await group_service.get_group(Group.title == 'Admin')
+    admin_gr = await group_service.get_obj(Group.title == 'Admin')
     assert admin_gr.users == [admin_user]
     response = await admin_client.patch('/api/groups/{}/add_users'.format(admin_gr.id), json=data)
     assert response.status_code == 400
@@ -63,7 +63,7 @@ async def test_exclude_users_from_group(admin_client: httpx.AsyncClient, simple_
             simple_user.id
         ]
     }
-    admin_gr = await group_service.get_group(Group.title == 'Admin')
+    admin_gr = await group_service.get_obj(Group.title == 'Admin')
     await group_service.add_users(admin_gr, [simple_user])
     assert admin_gr.users == [admin_user, simple_user]
     response = await admin_client.patch('/api/groups/{}/exclude_users'.format(admin_gr.id), json=data)
@@ -81,7 +81,7 @@ async def test_exclude_users_from_group_fail(admin_client: httpx.AsyncClient, si
             simple_user.id+admin_user.id
         ]
     }
-    admin_gr = await group_service.get_group(Group.title == 'Admin')
+    admin_gr = await group_service.get_obj(Group.title == 'Admin')
     assert admin_gr.users == [admin_user]
     response = await admin_client.patch('/api/groups/{}/exclude_users'.format(admin_gr.id), json=data)
     assert response.status_code == 400
@@ -92,7 +92,7 @@ async def test_exclude_users_from_group_fail(admin_client: httpx.AsyncClient, si
 
 
 @pytest_mark_asyncio
-async def test_forbidden(simple_client: httpx.AsyncClient, simple_user: User):
+async def test_forbidden(simple_client: httpx.AsyncClient):
     get = simple_client.get('/api/groups')
     add_users = simple_client.patch('/api/groups/1/add_users')
     exclude_users = simple_client.patch('/api/groups/1/exclude_users')
