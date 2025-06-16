@@ -22,7 +22,7 @@ async def test_create_user(admin_client: httpx.AsyncClient, user_service: UserSe
         'password': 'test_password'
     }
     result = await admin_client.post('/api/users', json=data)
-    created_user = await user_service.get_user(User.tg_name == data['tg_name'])
+    created_user = await user_service.get_obj(User.tg_name == data['tg_name'])
     assert created_user is not None
     assert result.status_code == 201
 
@@ -37,7 +37,7 @@ async def test_create_fail(admin_client: httpx.AsyncClient, user_service: UserSe
     assert response.status_code == 422
     assert response.json() == {'detail': [{'type': 'missing', 'loc': [
         'body', 'email'], 'msg': 'Field required', 'input': {'tg_name': 'test_tg', 'password': 'test_password'}}]}
-    assert await user_service.get_user(User.tg_name == data['tg_name']) is None
+    assert await user_service.get_obj(User.tg_name == data['tg_name']) is None
 
 
 @pytest_mark_asyncio
@@ -51,22 +51,20 @@ async def test_create_unauthorized(client: httpx.AsyncClient):
 
 
 @pytest_mark_asyncio
-async def test_get_user(admin_client: httpx.AsyncClient, simple_user):
+async def test_get_user(admin_client: httpx.AsyncClient, simple_user: User):
     response = await admin_client.get('/api/users/{}'.format(simple_user.id))
     assert response.status_code == 200
-    assert response.json() == {
-        'id': 9, 'tg_name': 'simple_user', 'email': 'simple@mail.ru'}
+    assert response.json() == UserViewSchema.model_validate(
+        simple_user, from_attributes=True).model_dump()
 
 
 @pytest_mark_asyncio
 async def test_get_users(admin_client: httpx.AsyncClient, admin_user: User, simple_user: User):
     response = await admin_client.get('/api/users')
-    simple_view_schema = UserViewSchema.model_validate(
-        simple_user, from_attributes=True).model_dump()
-    admin_view_schema = UserViewSchema.model_validate(
-        admin_user, from_attributes=True).model_dump()
+    expected = [UserViewSchema.model_validate(
+        obj, from_attributes=True).model_dump() for obj in [admin_user, simple_user]]
     assert response.status_code == 200
-    assert response.json() == [admin_view_schema, simple_view_schema]
+    assert response.json() == expected
 
 
 @pytest_mark_asyncio
@@ -109,7 +107,7 @@ async def test_delete(admin_client: httpx.AsyncClient, user_service: UserService
     assert res.scalars().all() != []
     response = await admin_client.delete('/api/users/{}'.format(id))
     assert response.status_code == 204
-    assert await user_service.get_user(User.id == id) is None
+    assert await user_service.get_obj(User.id == id) is None
     res2 = await session.execute(query)
     assert res2.scalars().all() == []
 

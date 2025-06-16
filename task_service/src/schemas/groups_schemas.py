@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from .users_schemas import UserViewSchema, UserInGroupSchema
 
@@ -13,4 +13,8 @@ class GroupVeiwSchema(BaseModel):
 
 
 class GroupUpdateSchema(BaseModel):
-    users: list[UserInGroupSchema]
+    users: list[int]
+
+    @field_validator('users')
+    def serialize_users(cls, val):
+        return list(set(val))
