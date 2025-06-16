@@ -5,6 +5,7 @@ from fastapi.exceptions import HTTPException
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.sql.expression import ColumnElement
 from repository.socket import Socket
+from .exceptions import internal_exc_to_http
 
 
 T = TypeVar('T')
@@ -17,27 +18,35 @@ class Service(Generic[T]):
         assert socket.model is self._target_model, f'try to init {self.__class__.__name__} with inappropriate model in socket. got model: {socket.model}'
         self.socket = socket
 
+    @internal_exc_to_http
     async def get_obj(self, *conditions: ColumnElement[bool], raise_exception: bool = False):
         return await self.socket.get_db_obj(*conditions, raise_exception=raise_exception)
 
+    @internal_exc_to_http
     async def get_objs(self, *conditions: ColumnElement[bool]) -> list[T]:
         return await self.socket.get_db_objs(*conditions)
 
+    @internal_exc_to_http
     async def get_column_vals(self, field: InstrumentedAttribute, *conditions: ColumnElement[bool]):
         return await self.socket.get_column_vals(field, *conditions)
 
+    @internal_exc_to_http
     async def get_columns_vals(self, fields: Sequence[InstrumentedAttribute], *conditions: ColumnElement[bool]):
         return await self.socket.get_columns_vals(fields, *conditions)
 
+    @internal_exc_to_http
     async def delete(self, *conditions: ColumnElement[bool], commit: bool = True) -> list[T]:
         return await self.socket.delete_db_objs(*conditions, commit=commit)
 
+    @internal_exc_to_http
     async def update(self, *conditions: ColumnElement[bool], commit: bool = True, **kwargs) -> list[T]:
         return await self.socket.update_db_objs(*conditions, commit=commit, **kwargs)
 
+    @internal_exc_to_http
     async def create_obj(self, commit: bool = True, **kwargs) -> T:
         return await self.socket.create_db_obj(commit=commit, **kwargs)
 
+    @internal_exc_to_http
     async def create_objs(self, table_raws: Sequence[dict], commit: bool = True) -> list[T]:
         return await self.socket.create_db_objs(table_raws, commit=commit)
 
