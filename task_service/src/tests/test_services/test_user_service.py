@@ -1,11 +1,11 @@
 import pytest
 
 from sqlalchemy import select, or_
-from sqlalchemy.exc import NoResultFound, CompileError
 from sqlalchemy.ext.asyncio import AsyncSession, AsyncEngine, async_sessionmaker
 
 from models.users import User
 from service.user_service import UserService
+from service.exceptions import ServiceError
 from security.password_utils import is_hashed
 
 
@@ -16,7 +16,7 @@ pytest_mark_asyncio = pytest.mark.asyncio
 async def test_get_methods(user_service: UserService, simple_user: User, admin_user: User):
     simple = await user_service.get_obj(User.tg_name == simple_user.tg_name)
     assert simple is not None
-    with pytest.raises(NoResultFound):
+    with pytest.raises(ServiceError):
         not_exist = await user_service.get_obj(User.tg_name == '[pas[o]]', raise_exception=True)
         assert not_exist is None
 
@@ -111,7 +111,7 @@ async def test_create_users_fail(user_service: UserService, session: AsyncSessio
             'password': 'test_pas'
         }
     ]
-    with pytest.raises(CompileError):
+    with pytest.raises(ServiceError):
         created = await user_service.create_objs(many_data)
         assert created is None
     query = select(User).where(
