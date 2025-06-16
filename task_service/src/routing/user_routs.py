@@ -26,7 +26,7 @@ async def get_users(request_user: User = Depends(get_user_allowed_by_group('Admi
 
 @user_router.get('/{id}', response_model=UserViewSchema)
 async def get_user(id: int, request_user: User = Depends(get_user_allowed_by_group('Admin')), user_service: UserService = Depends(get_user_service)):
-    user = await user_service.get_obj(User.id == id)
+    user = await user_service.get_obj(User.id == id, raise_exception=True)
     return user
 
 
