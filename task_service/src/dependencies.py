@@ -3,10 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db_session
 from repository.socket import DBSocket, SocketFactory, T
-from service.factories import UserServiceFactory, GroupServiceFactory
+from service.factories import UserServiceFactory, GroupServiceFactory, TaskServiceFactory
 from service.user_service import UserService
 from service.group_service import GroupService
 from models.users import User, Group
+from models.tasks import Task
 
 
 def get_socket(model: T):
@@ -17,6 +18,11 @@ def get_socket(model: T):
 
 def get_user_service(socket: DBSocket = Depends(get_socket(User))):
     service = UserServiceFactory.get_service(socket)
+    return service
+
+
+def get_task_service(socket: DBSocket = Depends(get_socket(Task))):
+    service = TaskServiceFactory.get_service(socket)
     return service
 
 

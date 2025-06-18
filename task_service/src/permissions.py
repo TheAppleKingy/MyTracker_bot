@@ -30,7 +30,7 @@ class GroupPermission(BasePermission):
     async def get_group_obj(self) -> Group:
         try:
             group_obj = await self.group_service.get_obj(Group.title == self.group, raise_exception=True)
-        except NoResultFound as err:
+        except NoResultFound:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail=str(err))
+                status_code=status.HTTP_409_CONFLICT, detail=f"Cannot check current user permissions by {self.group} group")
         return group_obj

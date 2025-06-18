@@ -9,7 +9,7 @@ def parse_integrity_err_msg(msg: str):
     return detail
 
 
-def internal_exc_to_http(service_method: Callable):
+def db_exception_handler(service_method: Callable):
     async def catch(self, *args, **kwargs):
         try:
             return await service_method(self, *args, **kwargs)
