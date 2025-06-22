@@ -2,7 +2,7 @@ from fastapi import Depends, Cookie
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db_session
-from repository.socket import DBSocket, SocketFactory, T
+from repository.abstract import DBSocket, SocketFactory, T
 from service.factories import UserServiceFactory, GroupServiceFactory, TaskServiceFactory
 from service.user_service import UserService
 from service.group_service import GroupService

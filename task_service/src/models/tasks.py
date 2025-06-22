@@ -19,7 +19,14 @@ class Task(Base):
     done: Mapped[bool] = mapped_column(default=False)
     user: Mapped['User'] = relationship(
         back_populates='tasks', lazy='selectin')
-    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
+    user_id: Mapped[int] = mapped_column(ForeignKey(
+        'users.id', ondelete='CASCADE'), index=True)
+    task_id: Mapped[int | None] = mapped_column(
+        ForeignKey('tasks.id', ondelete='CASCADE'), nullable=True, index=True)
+    task: Mapped['Task'] = relationship(
+        remote_side='Task.id', back_populates='subtasks', lazy='selectin')
+    subtasks: Mapped[list['Task']] = relationship(
+        back_populates='task', cascade='all, delete-orphan', lazy='selectin')
 
     @validates('pass_date')
     def validate_pass_date(self, key, value):
@@ -29,7 +36,7 @@ class Task(Base):
 
     @validates('done')
     def validate_done(self, key, value):
-        if not self.pass_date:
+        if value and not self.pass_date:
             raise ValueError(
-                'Have to set pass_date before setting "task.done" to True')
+                f'Have to set pass_date before setting "task.done" to True in Task obj "{self.title}"')
         return value

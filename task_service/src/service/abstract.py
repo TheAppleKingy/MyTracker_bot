@@ -2,9 +2,10 @@ from typing import TypeVar, Sequence, Any, Callable, Generic
 
 from fastapi import status
 from fastapi.exceptions import HTTPException
+from sqlalchemy.orm import Load
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.sql.expression import ColumnElement
-from repository.socket import Socket
+from repository.abstract import Socket
 from .exceptions import db_exception_handler
 
 
@@ -19,12 +20,12 @@ class Service(Generic[T]):
         self.socket = socket
 
     @db_exception_handler
-    async def get_obj(self, *conditions: ColumnElement[bool], raise_exception: bool = False):
-        return await self.socket.get_db_obj(*conditions, raise_exception=raise_exception)
+    async def get_obj(self, *conditions: ColumnElement[bool], options: list[Load] = None, raise_exception: bool = False):
+        return await self.socket.get_db_obj(*conditions, options=options, raise_exception=raise_exception)
 
     @db_exception_handler
-    async def get_objs(self, *conditions: ColumnElement[bool]) -> list[T]:
-        return await self.socket.get_db_objs(*conditions)
+    async def get_objs(self, *conditions: ColumnElement[bool], options: list[Load] = None) -> list[T]:
+        return await self.socket.get_db_objs(*conditions, options=options)
 
     @db_exception_handler
     async def get_column_vals(self, field: InstrumentedAttribute, *conditions: ColumnElement[bool]):

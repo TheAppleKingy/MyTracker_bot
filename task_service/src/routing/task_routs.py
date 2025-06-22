@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, status
 
-from dependencies import get_user_allowed_by_group, get_task_service, get_user_service
+from dependencies import get_user_allowed_by_group, get_task_service
 from models.users import User
 from models.tasks import Task
 from service.user_service import UserService
 from service.task_service import TaskService
-from schemas.task_schemas import TaskCreateSchema, TaskViewSchema, TaskUpdateSchema
+from schemas.task_schemas import TaskCreateSchema, TaskViewSchema, TaskUpdateSchema, TaskTreeSchema
 
 
 task_router = APIRouter(
@@ -20,10 +20,11 @@ async def create_task(task_data: TaskCreateSchema, request_user: User = Depends(
     return task
 
 
-@task_router.get('', response_model=list[TaskViewSchema])
-async def get_tasks(request_user: User = Depends(get_user_allowed_by_group('Admin')), task_service: TaskService = Depends(get_task_service)):
-    tasks = await task_service.get_objs()
-    return tasks
+@task_router.get('/trees', response_model=list[TaskTreeSchema])
+async def get_tasks_trees(request_user: User = Depends(get_user_allowed_by_group('Admin')), task_service: TaskService = Depends(get_task_service)):
+    root_tasks = await task_service.get_root_tasks()
+    trees = await task_service.get_tasks_trees(root_tasks)
+    return trees
 
 
 @task_router.get('/{id}', response_model=TaskViewSchema)

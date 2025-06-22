@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, status
 
-from dependencies import get_user_allowed_by_group, get_user_service
+from dependencies import get_user_allowed_by_group, get_user_service, get_task_service
 from models.users import User
 from service.user_service import UserService
+from service.task_service import TaskService
 from schemas.users_schemas import UserCreateSchema, UserViewSchema, UserUpdateSchema
 from schemas.task_schemas import TaskForUserSchema
 
@@ -43,6 +44,7 @@ async def update_user(id: int, data_to_update: UserUpdateSchema, request_user: U
 
 
 @user_router.get('/{id}/tasks', response_model=list[TaskForUserSchema])
-async def get_user_tasks(id: int, request_user: User = Depends(get_user_allowed_by_group('Admin')), user_service: UserService = Depends(get_user_service)):
+async def get_user_tasks(id: int, request_user: User = Depends(get_user_allowed_by_group('Admin')), user_service: UserService = Depends(get_user_service), task_service: TaskService = Depends(get_task_service)):
     user = await user_service.get_obj(User.id == id, raise_exception=True)
-    return user.tasks
+    tree = await task_service.get_user_tasks_trees(user)
+    return tree
