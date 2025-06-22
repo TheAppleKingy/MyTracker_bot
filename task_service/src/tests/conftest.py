@@ -9,8 +9,9 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, Asyn
 from config import FORMATTED_DATABASE_URL, TEST_DATABASE_URL
 from models.base import Base
 from models.users import User, Group
-from service.factories import UserServiceFactory, GroupServiceFactory
-from repository.socket import SocketFactory
+from models.tasks import Task
+from service.factories import UserServiceFactory, GroupServiceFactory, TaskServiceFactory
+from repository.abstract import SocketFactory
 
 
 test_db_name = os.getenv('TEST_DB_NAME')
@@ -64,6 +65,13 @@ def group_service(session: AsyncSession):
     socket = SocketFactory.get_socket(Group, session)
     group_service = GroupServiceFactory.get_service(socket)
     return group_service
+
+
+@pytest.fixture
+def task_service(session: AsyncSession):
+    socket = SocketFactory.get_socket(Task, session)
+    task_service = TaskServiceFactory.get_service(socket)
+    return task_service
 
 
 @pytest_asyncio.fixture(autouse=True)

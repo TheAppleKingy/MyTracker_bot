@@ -1,7 +1,8 @@
-from typing import Callable, TypeVar, Sequence, Generic
+from typing import Callable, TypeVar, Sequence, Generic, Type
 from abc import ABC, abstractmethod
 
 from sqlalchemy import select, update, delete, insert
+from sqlalchemy.orm import Load
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.expression import ColumnElement
 from sqlalchemy.orm.attributes import InstrumentedAttribute
@@ -24,16 +25,16 @@ def commitable(commitable_method: Callable):
 
 class Socket(ABC, Generic[T]):
     def __init__(self, model: T, session: AsyncSession):
-        self.model: T = model
+        self.model = model
         self.session = session
 
     @abstractmethod
     async def get_db_obj(
-        self, *conditions: ColumnElement[bool], raise_exception: bool = False) -> T: ...
+        self, *conditions: ColumnElement[bool], options: list[Load] = None, raise_exception: bool = False) -> T: ...
 
     @abstractmethod
     async def get_db_objs(
-        self, *conditions: ColumnElement[bool]) -> list[T]: ...
+        self, *conditions: ColumnElement[bool], options: list[Load] = None) -> list[T]: ...
 
     @abstractmethod
     async def get_column_vals(
@@ -60,20 +61,24 @@ class Socket(ABC, Generic[T]):
     async def force_commit(self):
         await self.session.commit()
 
-    async def refresh(self, obj: T):
-        await self.session.refresh(obj)
+    async def refresh(self, obj: T, field_names: list[str] = None):
+        await self.session.refresh(obj, attribute_names=field_names)
 
 
 class DBSocket(Socket[T]):
-    async def get_db_obj(self, *conditions: ColumnElement[bool], raise_exception: bool = False) -> T:
+    async def get_db_obj(self, *conditions: ColumnElement[bool], options: list[Load] = None, raise_exception: bool = False) -> T | None:
         query = select(self.model).where(*conditions)
+        if options:
+            query = query.options(*options)
         db_resp = await self.session.execute(query)
         if raise_exception:
             return db_resp.scalar_one()
         return db_resp.scalar_one_or_none()
 
-    async def get_db_objs(self, *conditions: ColumnElement[bool]) -> list[T]:
+    async def get_db_objs(self, *conditions: ColumnElement[bool], options: list[Load] = None) -> list[T]:
         query = select(self.model).where(*conditions)
+        if options:
+            query = query.options(*options)
         db_resp = await self.session.execute(query)
         return db_resp.scalars().all()
 

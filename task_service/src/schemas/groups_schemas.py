@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 
-from .users_schemas import UserViewSchema, UserInGroupSchema
+from .users_schemas import UserViewSchema
 
 
 class GroupVeiwSchema(BaseModel):

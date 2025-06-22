@@ -1,6 +1,6 @@
 import pytest
 
-from models.users import Group, User
+from models.users import User
 from service.group_service import GroupService
 
 pytest_mark_asyncio = pytest.mark.asyncio

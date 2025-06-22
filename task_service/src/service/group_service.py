@@ -1,27 +1,18 @@
 from typing import Sequence
 
 from models.users import User, Group
-from .abstract import Service
+from .abstract import Service, add_related_objs, exclude_related_objs
 
 
 class GroupService(Service[Group]):
     _target_model = Group
 
     async def add_users(self, group: Group, users: Sequence[User]) -> list[User]:
-        to_add = []
-        for user in users:
-            if user not in group.users:
-                group.users.append(user)
-                to_add.append(user)
+        added = add_related_objs(group, users, Group.users)
         await self.socket.force_commit()
-        return to_add
+        return added
 
     async def exclude_users(self, group: Group, users: Sequence[User]) -> list[User]:
-        excluded = []
-        for user in users:
-            if user in group.users:
-                idx = group.users.index(user)
-                deleted_user = group.users.pop(idx)
-                excluded.append(deleted_user)
+        excluded = exclude_related_objs(group, users, Group.users)
         await self.socket.force_commit()
         return excluded

@@ -42,17 +42,15 @@ async def test_add_users_into_group(admin_client: httpx.AsyncClient, simple_user
 async def test_add_users_into_group_fail(admin_client: httpx.AsyncClient, simple_user: User, admin_user: User, group_service: GroupService):
     data = {
         'users': [
-            admin_user.id+simple_user.id, admin_user.id+simple_user.id+2
+            admin_user.id+simple_user.id
         ]
     }
     admin_gr = await group_service.get_obj(Group.title == 'Admin')
     assert admin_gr.users == [admin_user]
     response = await admin_client.patch('/api/groups/{}/add_users'.format(admin_gr.id), json=data)
     assert response.status_code == 400
-    assert "Trying add m2m objects with not existing ids: " in response.json()[
-        'detail']
-    assert f'{admin_user.id+simple_user.id}' in response.json()['detail']
-    assert f'{admin_user.id+simple_user.id+2}' in response.json()['detail']
+    assert response.json() == {'detail': '"User" objects with next "id"s do not exist: {}'.format(
+        data['users'][0])}
     assert admin_gr.users == [admin_user]
 
 
@@ -85,9 +83,8 @@ async def test_exclude_users_from_group_fail(admin_client: httpx.AsyncClient, si
     assert admin_gr.users == [admin_user]
     response = await admin_client.patch('/api/groups/{}/exclude_users'.format(admin_gr.id), json=data)
     assert response.status_code == 400
-    assert "Trying add m2m objects with not existing ids: " in response.json()[
-        'detail']
-    assert f'{admin_user.id+simple_user.id}' in response.json()['detail']
+    assert response.json() == {
+        'detail': '"User" objects with next "id"s do not exist: {}'.format(data['users'][0])}
     assert admin_gr.users == [admin_user]
 
 
