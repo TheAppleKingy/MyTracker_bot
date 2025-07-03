@@ -1,11 +1,13 @@
-from typing import Callable, TypeVar, Sequence, Generic, Type
-from abc import ABC, abstractmethod
+from typing import Callable, TypeVar, Sequence
 
 from sqlalchemy import select, update, delete, insert
+from sqlalchemy.sql.elements import TextClause
 from sqlalchemy.orm import Load
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.expression import ColumnElement
 from sqlalchemy.orm.attributes import InstrumentedAttribute
+
+from .exceptions import RepositoryError
 
 
 T = TypeVar('T')
@@ -14,65 +16,25 @@ T = TypeVar('T')
 def commitable(commitable_method: Callable):
     """This decorator provides opportunity to commit changes in db after calling DBSocket methods. Changes will be commited by default. If don't need commit changes set "commit=False" """
 
-    async def commit(self: Socket, *args, **kwargs):
+    async def commit(self, *args, **kwargs):
         commit = kwargs.pop('commit', True)
         res = await commitable_method(self, *args, **kwargs)
         if commit:
-            await self.session.commit()
+            await self.force_commit()
         return res
     return commit
 
 
-class Socket(ABC, Generic[T]):
+class BaseRepo:
     def __init__(self, model: T, session: AsyncSession):
         self.model = model
         self.session = session
 
-    @abstractmethod
-    async def get_db_obj(
-        self, *conditions: ColumnElement[bool], options: list[Load] = None, raise_exception: bool = False) -> T: ...
-
-    @abstractmethod
-    async def get_db_objs(
-        self, *conditions: ColumnElement[bool], options: list[Load] = None) -> list[T]: ...
-
-    @abstractmethod
-    async def get_column_vals(
-        self, field: InstrumentedAttribute, *conditions: ColumnElement[bool]) -> list: ...
-
-    @abstractmethod
-    async def get_columns_vals(self, fields: Sequence[InstrumentedAttribute],
-                               *conditions: ColumnElement[bool], mapped: bool = False) -> list[tuple]: ...
-
-    @abstractmethod
-    async def delete_db_objs(
-        self, *conditions: ColumnElement[bool]) -> list[T]: ...
-
-    @abstractmethod
-    async def update_db_objs(
-        self, *conditions: ColumnElement[bool], **kwargs) -> list[T]: ...
-
-    @abstractmethod
-    async def create_db_obj(self, **kwargs) -> T: ...
-
-    @abstractmethod
-    async def create_db_objs(self, table_raws: Sequence[dict]) -> list[T]: ...
-
-    async def force_commit(self):
-        await self.session.commit()
-
-    async def refresh(self, obj: T, field_names: list[str] = None):
-        await self.session.refresh(obj, attribute_names=field_names)
-
-
-class DBSocket(Socket[T]):
-    async def get_db_obj(self, *conditions: ColumnElement[bool], options: list[Load] = None, raise_exception: bool = False) -> T | None:
+    async def get_db_obj(self, *conditions: ColumnElement[bool], options: list[Load] = None) -> T | None:
         query = select(self.model).where(*conditions)
         if options:
             query = query.options(*options)
         db_resp = await self.session.execute(query)
-        if raise_exception:
-            return db_resp.scalar_one()
         return db_resp.scalar_one_or_none()
 
     async def get_db_objs(self, *conditions: ColumnElement[bool], options: list[Load] = None) -> list[T]:
@@ -129,8 +91,21 @@ class DBSocket(Socket[T]):
         objs = res.scalars().all()
         return objs
 
+    async def force_commit(self):
+        await self.session.commit()
 
-class SocketFactory:
-    @classmethod
-    def get_socket(cls, model: T, session: AsyncSession):
-        return DBSocket(model, session)
+    async def refresh(self, obj: T, field_names: list[str] = None):
+        await self.session.refresh(obj, attribute_names=field_names)
+
+    async def execute_query(self, query: TextClause):
+        return await self.session.execute(query)
+
+
+class InitRepo:
+    _model: T
+
+    def __init__(self, repository: BaseRepo):
+        if repository.model is not self._model:
+            raise RepositoryError(
+                f'Error init {self.__class__.__name__}: got BaseRepository where set model ({repository.model}), expected {self._model.__name__}', self.__class__.__name__)
+        self._repo = repository

@@ -1,89 +1,84 @@
-from datetime import datetime, timezone
 from typing import Sequence
 
-from sqlalchemy import text
-from sqlalchemy.orm import selectinload
+from infra.db.models.tasks import Task
+from infra.db.models.users import User
+from infra.db.repository.task_repo import TaskRepository
+from infra.db.repository.user_repo import UserRepository
+from api.schemas.task_schemas import TaskCreateForUserSchema, TaskUpdateForUserSchema
+from .exceptions import TaskServiceError
 
-from models.users import User
-from models.tasks import Task
-from .exceptions import ServiceError
-from .abstract import Service
 
-
-class TaskService(Service[Task]):
-    _target_model = Task
+class TaskService:
+    def __init__(self, task_repository: TaskRepository, user_repository: UserRepository):
+        self.repo = task_repository
+        self.user_repo = user_repository
 
     def check_is_root_task(self, task: Task):
         return not bool(task.task_id)
 
-    def get_root_tasks_for_user(self, user: User):
-        return [task for task in user.tasks if self.check_is_root_task(task)]
-
-    def check_is_root_for_user(self, user: User, task: Task):
-        user_tasks = self.get_root_tasks_for_user(user)
-        if not task in user_tasks:
-            raise ServiceError(
-                f'Task ({task.title}) is not task for user ({user.tg_name})')
-
-    async def get_root_tasks(self):
-        return await self.get_objs(self._target_model.task_id == None)
-
-    async def get_task_tree(self, from_task: Task, return_root: bool = True):
-        """If return_root == True, method return only root of tree, otherwise return list of all nested tasks starts from from_task(nested fields are set in both cases)"""
-        query = text(f"""WITH RECURSIVE task_tree AS (
-            SELECT * FROM tasks WHERE id = {from_task.id}
-            UNION ALL
-            SELECT t.* FROM tasks t
-            INNER JOIN task_tree tt ON t.task_id = tt.id
-        )
-        SELECT * FROM task_tree;""")
-        res = await self.socket.session.execute(query)
-        tasks_data = res.mappings().all()
-        ids = [task_data['id'] for task_data in tasks_data]
-        tasks_objs = await self.get_objs(self._target_model.id.in_(ids), options=[selectinload(self._target_model.subtasks)])
-        if return_root:
-            return tasks_objs[0]
-        return tasks_objs
-
-    async def get_tasks_trees(self, from_tasks: Sequence[Task], return_roots: bool = True):
-        if return_roots:
-            return [await self.get_task_tree(task) for task in from_tasks]
-        return [await self.get_task_tree(task, return_root=return_roots) for task in from_tasks]
-
-    async def get_user_task_tree(self, user: User, root_task: Task, return_root: bool = True):
-        self.check_is_root_for_user(user, root_task)
-        if return_root:
-            return await self.get_task_tree(root_task)
-        return await self.get_task_tree(root_task, return_root=return_root)
-
-    async def get_user_tasks_trees(self, user: User, return_roots: bool = True):
-        roots = self.get_root_tasks_for_user(user)
-        if return_roots:
-            return await self.get_tasks_trees(roots)
-        return await self.get_tasks_trees(roots, return_roots=return_roots)
-
     def check_task_done(self, task: Task):
         return task.done and bool(task.pass_date)
 
-    async def finish_task(self, task: Task):
-        if self.check_task_done(task):
-            raise ServiceError(f'Task ({task.title}) already finished')
+    async def check_is_root_for_user(self, user_id: int, task_id: int):
+        user_root_tasks = await self.get_root_tasks_for_user(user_id)
+        target_task = await self.repo.get_task(task_id)
+        if not target_task in user_root_tasks:
+            raise TaskServiceError(
+                f'Task ({target_task.title}) is not task for user ({user_id})')
+
+    async def get_root_tasks_for_user(self, user_id: int) -> list[Task]:
+        user = await self.user_repo.get_user_and_tasks(user_id)
+        return [task for task in user.tasks if self.check_is_root_task(task)]
+
+    async def get_full_trees(self, return_lists: bool = False):
+        roots = await self.repo.get_root_tasks()
+        ids = [root.id for root in roots]
+        return await self.get_tasks_trees(ids, return_lists=return_lists)
+
+    async def get_task_tree(self, from_task_id: Task, return_list: bool = False):
+        """Returns root of task tree starts from task has id = from_task_id"""
+        return await self.repo.get_nested_tasks(from_task_id, return_list=return_list)
+
+    async def get_tasks_trees(self, from_task_ids: Sequence[int], return_lists: bool = False):
+        return [await self.get_task_tree(task, return_list=return_lists) for task in from_task_ids]
+
+    async def get_user_task_tree(self, user_id: int, root_task_id: int, return_list: bool = False):
+        self.check_is_root_for_user(user_id, root_task_id)
+        return await self.get_task_tree(root_task_id, return_list=return_list)
+
+    async def get_user_tasks_trees(self, user_id: int, return_lists: bool = False):
+        roots = await self.get_root_tasks_for_user(user_id)
+        root_ids = [task.id for task in roots]
+        return await self.get_tasks_trees(root_ids, return_lists=return_lists)
+
+    async def finish_task(self, task_id: int):
+        tree = await self.get_task_tree(task_id, return_list=True)
+        task = tree[0]
         not_finished_subtasks = []
-        nested_tasks = await self.get_task_tree(task, return_root=False)
-        subtasks = nested_tasks[1:]
+        subtasks = tree[1:]
         for subtask in subtasks:
-            if not self.check_task_done(subtask) and subtask.task_id == task.id:
+            if not self.check_task_done(subtask):
                 not_finished_subtasks.append(str(subtask.id))
         if not_finished_subtasks:
-            raise ServiceError(
-                f'Cannot finish task ({task.title}) while not finished subtasks with next ids: {', '.join(not_finished_subtasks)}')
-        task.pass_date = datetime.now(timezone.utc)
-        task.done = True
-        await self.socket.force_commit()
-        return task
+            raise TaskServiceError(
+                f'Cannot finish task ({task.title[:15]}) while not finished subtasks with next ids: {', '.join(not_finished_subtasks)}')
+        finished = await self.repo.finish_task(task)
+        return finished
 
-    async def finish_user_task(self, user: User, task: Task):
-        if task.user_id != user.id:
-            raise ServiceError(
-                f'User ({user.tg_name}) has no task with title ({task.title})')
-        return await self.finish_task(task)
+    async def add_task_to_user(self, user_id: int, task_schema: TaskCreateForUserSchema):
+        return await self.repo.create_task(**task_schema.model_dump(exclude_none=True), user_id=user_id)
+
+    async def update_task_for_user(self, user_id: int, task_id: int, task_update_schema: TaskUpdateForUserSchema):
+        user = await self.user_repo.get_user_and_tasks(user_id)
+        if not any([task.id == task_id for task in user.tasks]):
+            raise TaskServiceError(
+                f'Task ({task_id}) does not belong to user ({user_id})')
+        updated = await self.repo.update_task(task_id, **task_update_schema.model_dump(exclude_none=True))
+        return updated
+
+    async def finish_task_for_user(self, user_id: int, task_id: int):
+        task = await self.repo.get_task(task_id)
+        if task.user_id != user_id:
+            raise TaskServiceError(
+                f'Task ({task.title[:15]}) does not belong to user with id ({user_id})')
+        return await self.finish_task(task_id)
