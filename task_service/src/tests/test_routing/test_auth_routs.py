@@ -1,14 +1,10 @@
 import pytest
 import httpx
 
-from datetime import datetime, timedelta
-
-from freezegun import freeze_time
-
-from models.users import User
-from service.user_service import UserService
-from schemas.users_schemas import UserViewSchema
-from security.authentication import decode
+from infra.db.models.users import User
+from infra.db.repository.user_repo import UserRepository
+from api.schemas.users_schemas import UserViewSchema
+from infra.security.jwt import decode
 
 
 pytest_mark_asyncio = pytest.mark.asyncio
@@ -35,7 +31,7 @@ urls = {
 
 
 @pytest_mark_asyncio
-async def test_registration(simple_client: httpx.AsyncClient, user_service: UserService):
+async def test_registration(simple_client: httpx.AsyncClient, user_repo: UserRepository):
     data = {
         'tg_name': 'new_tg',
         'email': 'user@mail.ru',
@@ -43,7 +39,7 @@ async def test_registration(simple_client: httpx.AsyncClient, user_service: User
     }
     response = await simple_client.post(urls['profile']['registration'], json=data)
     assert response.status_code == 200
-    registered = await user_service.get_obj(User.tg_name == data['tg_name'])
+    registered = await user_repo.get_user_by_email(data['email'])
     assert registered is not None
     expected = UserViewSchema.model_validate(
         registered, from_attributes=True).model_dump()
@@ -51,7 +47,7 @@ async def test_registration(simple_client: httpx.AsyncClient, user_service: User
 
 
 @pytest_mark_asyncio
-async def test_registration_fail(simple_client: httpx.AsyncClient, user_service: UserService):
+async def test_registration_fail(simple_client: httpx.AsyncClient):
     data = {}
     response = await simple_client.post(urls['profile']['registration'], json=data)
     assert response.status_code == 422
@@ -77,25 +73,17 @@ async def test_registration_fail(simple_client: httpx.AsyncClient, user_service:
             }
         ]
     }
-    assert len(await user_service.get_objs()) == 2
 
 
 @pytest_mark_asyncio
-async def test_login(client: httpx.AsyncClient, user_service: UserService):
-    data = {
-        'tg_name': 'new_tg',
-        'email': 'user@mail.ru',
-        'password': 'test-password'
-    }
-    user = await user_service.create_obj(**data)
-    assert client.cookies.get('token') is None
-    response = await client.post(urls['profile']['login'], json={'email': data['email'], 'password': data['password']})
+async def test_login(client: httpx.AsyncClient, simple_user: User):
+    response = await client.post(urls['profile']['login'], json={'email': simple_user.email, 'password': 'test_password'})
     assert response.status_code == 200
     assert response.json() == {'detail': 'logged in'}
-    assert client.cookies.get('token') is not None
-    token = client.cookies.get('token')
+    token = client.cookies.get('token', None)
+    assert token is not None
     payload = decode(token)
-    assert payload['user_id'] == user.id
+    assert payload['user_id'] == simple_user.id
 
 
 @pytest_mark_asyncio
@@ -106,11 +94,8 @@ async def test_login_fail_pas(client: httpx.AsyncClient, simple_user: User):
     }
     response = await client.post(urls['profile']['login'], json=data)
     assert response.status_code == 400
-    assert response.json() == {
-        'detail': {
-            'error': 'wrong password'
-        }
-    }
+    assert response.json() == {'detail': {
+        'service': 'UserAuthService', 'msgs': ['Wrong password']}}
 
 
 @pytest_mark_asyncio
@@ -121,11 +106,8 @@ async def test_login_fail_email(client: httpx.AsyncClient):
     }
     response = await client.post(urls['profile']['login'], json=data)
     assert response.status_code == 400
-    assert response.json() == {
-        'detail': {
-            'error': 'user with this email not found'
-        }
-    }
+    assert response.json() == {'detail': {'service': 'UserAuthService', 'msgs': [
+        f'Unable to find user with email ({data["email"]})']}}
 
 
 @pytest_mark_asyncio

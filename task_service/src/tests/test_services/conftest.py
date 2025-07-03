@@ -5,18 +5,47 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models.tasks import Task
-from models.users import User
+from infra.db.models.tasks import Task
+from infra.db.models.users import User, Group
+from infra.db.repository.user_repo import UserRepository
+from infra.db.repository.group_repo import GroupRepository
+from infra.db.repository.task_repo import TaskRepository
 from service.task_service import TaskService
+from service.user_service import UserService, UserAuthService, UserPermissionService
+from service.group_service import GroupService
 
 
-@pytest_asyncio.fixture
-async def root(session: AsyncSession, task_service: TaskService, simple_user: User):
-    root = await task_service.create_obj(title='root', description='root descr', user_id=simple_user.id)
-    subroot1 = await task_service.create_obj(title='subroot1', description='subroot1 descr', task_id=root.id, user_id=simple_user.id)
-    subsubroot1 = await task_service.create_obj(title='subsubroot1', description='subsubroot1 descr', task_id=subroot1.id, user_id=simple_user.id)
-    subroot2 = await task_service.create_obj(title='subroot2', description='subroot2 descr', task_id=root.id, user_id=simple_user.id)
-    await session.refresh(simple_user, ['tasks'])
-    await session.refresh(root, ['subtasks'])
-    await session.refresh(subroot1, ['subtasks'])
-    return root
+@pytest.fixture
+def mock_task_repo(mocker):
+    return mocker.Mock()
+
+
+@pytest.fixture
+def mock_user_repo(mocker):
+    repo = mocker.Mock()
+    repo.get_user = mocker.AsyncMock()
+    repo.get_user_by_email = mocker.AsyncMock()
+    repo.get_user_and_tasks = mocker.AsyncMock()
+    repo.get_user_and_groups = mocker.AsyncMock()
+    repo.create_user = mocker.AsyncMock()
+    return repo
+
+
+@pytest.fixture
+def task_service(mock_task_repo: TaskRepository, mock_user_repo: UserRepository):
+    return TaskService(mock_task_repo, mock_user_repo)
+
+
+@pytest.fixture
+def user_service(mock_user_repo, mock_task_repo):
+    return UserService(mock_user_repo, mock_task_repo)
+
+
+@pytest.fixture
+def auth_service(mock_user_repo):
+    return UserAuthService(mock_user_repo)
+
+
+@pytest.fixture
+def permission_service(mock_user_repo):
+    return UserPermissionService(mock_user_repo, allowed_group_name="admin")

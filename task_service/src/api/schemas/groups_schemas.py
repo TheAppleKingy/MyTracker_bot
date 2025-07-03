@@ -16,5 +16,5 @@ class GroupUpdateSchema(BaseModel):
     users: list[int]
 
     @field_validator('users')
-    def serialize_users(cls, val):
+    def validate_users(cls, val):
         return list(set(val))

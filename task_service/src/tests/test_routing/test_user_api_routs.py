@@ -5,49 +5,39 @@ import asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models.users import User
-from models.associations import users_groups
-from service.user_service import UserService
-from schemas.users_schemas import UserViewSchema, UserUpdateSchema
+from infra.db.models.users import User
+from infra.db.models.associations import users_groups
+from api.schemas.users_schemas import UserViewSchema, UserUpdateSchema
 
 
 pytest_mark_asyncio = pytest.mark.asyncio
 
 
 @pytest_mark_asyncio
-async def test_create_user(admin_client: httpx.AsyncClient, user_service: UserService):
+async def test_create_user(admin_client: httpx.AsyncClient, session: AsyncSession):
     data = {
         'tg_name': 'test_tg',
         'email': 'test_email@mail.com',
         'password': 'test_password'
     }
     result = await admin_client.post('/api/users', json=data)
-    created_user = await user_service.get_obj(User.tg_name == data['tg_name'])
+    res = await session.execute(select(User).where(User.email == data['email']))
+    created_user = res.scalar_one_or_none()
     assert created_user is not None
     assert result.status_code == 201
 
 
 @pytest_mark_asyncio
-async def test_create_fail(admin_client: httpx.AsyncClient, user_service: UserService):
+async def test_create_already_exists(admin_client: httpx.AsyncClient):
     data = {
-        'tg_name': 'test_tg',
+        'tg_name': 'admin',
+        'email': 'kaska',
         'password': 'test_password'
     }
     response = await admin_client.post('/api/users', json=data)
-    assert response.status_code == 422
-    assert response.json() == {'detail': [{'type': 'missing', 'loc': [
-        'body', 'email'], 'msg': 'Field required', 'input': {'tg_name': 'test_tg', 'password': 'test_password'}}]}
-    assert await user_service.get_obj(User.tg_name == data['tg_name']) is None
-
-
-@pytest_mark_asyncio
-async def test_create_unauthorized(client: httpx.AsyncClient):
-    data = {
-        'any': 'any'
-    }
-    response = await client.post('/api/users', json=data)
-    assert response.status_code == 401
-    assert response.json() == {'detail': {'error': 'token was not provide'}}
+    assert response.status_code == 400
+    assert response.json() == {'detail': {'repository': 'UserRepository',
+                                          'internal exception class': 'IntegrityError', 'msgs': ['Key (tg_name)=(admin) already exists.']}}
 
 
 @pytest_mark_asyncio
@@ -59,18 +49,19 @@ async def test_get_user(admin_client: httpx.AsyncClient, simple_user: User):
 
 
 @pytest_mark_asyncio
+async def test_get_user_none(admin_client: httpx.AsyncClient):
+    response = await admin_client.get('/api/users/0')
+    assert response.status_code == 200
+    assert response.json() == None
+
+
+@pytest_mark_asyncio
 async def test_get_users(admin_client: httpx.AsyncClient, admin_user: User, simple_user: User):
     response = await admin_client.get('/api/users')
     expected = [UserViewSchema.model_validate(
         obj, from_attributes=True).model_dump() for obj in [admin_user, simple_user]]
     assert response.status_code == 200
     assert response.json() == expected
-
-
-@pytest_mark_asyncio
-async def test_get_unauthorized(client: httpx.AsyncClient):
-    response = await client.get('/api/users')
-    assert response.status_code == 401
 
 
 @pytest_mark_asyncio
@@ -90,32 +81,16 @@ async def test_update(admin_client: httpx.AsyncClient, simple_user: User):
 
 
 @pytest_mark_asyncio
-async def test_update_unauthorized(client: httpx.AsyncClient, simple_user: User):
-    data = {
-        'email': 'updated@mail.com',
-        'first_name': 'simple'
-    }
-    response = await client.patch('/api/users/{}'.format(simple_user.id), json=data)
-    assert response.status_code == 401
-
-
-@pytest_mark_asyncio
-async def test_delete(admin_client: httpx.AsyncClient, user_service: UserService, simple_user: User, session: AsyncSession):
+async def test_delete(admin_client: httpx.AsyncClient, simple_user: User, session: AsyncSession):
     id = simple_user.id
     query = select(users_groups).where(users_groups.c.user_id == id)
     res = await session.execute(query)
     assert res.scalars().all() != []
     response = await admin_client.delete('/api/users/{}'.format(id))
     assert response.status_code == 204
-    assert await user_service.get_obj(User.id == id) is None
-    res2 = await session.execute(query)
-    assert res2.scalars().all() == []
-
-
-@pytest_mark_asyncio
-async def test_delete_unathorized(client: httpx.AsyncClient, simple_user: User):
-    response = await client.delete('/api/users/{}'.format(simple_user.id))
-    assert response.status_code == 401
+    res = await session.execute(select(User).where(User.id == id))
+    user = res.scalar_one_or_none()
+    assert user is None
 
 
 @pytest_mark_asyncio

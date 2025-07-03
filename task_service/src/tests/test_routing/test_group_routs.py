@@ -2,33 +2,34 @@ import pytest
 import httpx
 import asyncio
 
-from models.users import User, Group
+from infra.db.models.users import User, Group
+from infra.db.repository.group_repo import GroupRepository
 from service.group_service import GroupService
-from schemas.users_schemas import UserViewSchema
-from schemas.groups_schemas import GroupVeiwSchema
+from api.schemas.users_schemas import UserViewSchema
+from api.schemas.groups_schemas import GroupVeiwSchema
 
 
 pytest_mark_asyncio = pytest.mark.asyncio
 
 
 @pytest_mark_asyncio
-async def test_get_groups(admin_client: httpx.AsyncClient, group_service: GroupService):
+async def test_get_groups(admin_client: httpx.AsyncClient, group_repo: GroupRepository):
     response = await admin_client.get('/api/groups')
     assert response.status_code == 200
-    groups = await group_service.get_objs(Group.title.in_(['Admin', 'Other']))
+    groups = await group_repo.get_all_groups()
     expected = [GroupVeiwSchema.model_validate(
         obj, from_attributes=True).model_dump() for obj in groups]
     assert response.json() == expected
 
 
 @pytest_mark_asyncio
-async def test_add_users_into_group(admin_client: httpx.AsyncClient, simple_user: User, admin_user: User, group_service: GroupService):
+async def test_add_users_into_group(admin_client: httpx.AsyncClient, simple_user: User, admin_user: User, group_repo: GroupRepository, admin_group: Group):
     data = {
         'users': [
             simple_user.id, simple_user.id
         ]
     }
-    admin_gr = await group_service.get_obj(Group.title == 'Admin')
+    admin_gr = await group_repo.get_group_and_users(admin_group.id)
     assert admin_gr.users == [admin_user]
     response = await admin_client.patch('/api/groups/{}/add_users'.format(admin_gr.id), json=data)
     assert response.status_code == 200
@@ -39,30 +40,30 @@ async def test_add_users_into_group(admin_client: httpx.AsyncClient, simple_user
 
 
 @pytest_mark_asyncio
-async def test_add_users_into_group_fail(admin_client: httpx.AsyncClient, simple_user: User, admin_user: User, group_service: GroupService):
+async def test_add_users_into_group_fail(admin_client: httpx.AsyncClient, simple_user: User, admin_user: User, group_repo: GroupRepository, admin_group: Group):
     data = {
         'users': [
             admin_user.id+simple_user.id
         ]
     }
-    admin_gr = await group_service.get_obj(Group.title == 'Admin')
+    admin_gr = await group_repo.get_group_and_users(admin_group.id)
     assert admin_gr.users == [admin_user]
     response = await admin_client.patch('/api/groups/{}/add_users'.format(admin_gr.id), json=data)
     assert response.status_code == 400
-    assert response.json() == {'detail': '"User" objects with next "id"s do not exist: {}'.format(
-        data['users'][0])}
+    assert response.json() == {'detail': {'service': 'GroupService', 'msgs': [
+        f'"User" objects with next "id"s do not exist: {data['users'][0]}']}}
     assert admin_gr.users == [admin_user]
 
 
 @pytest_mark_asyncio
-async def test_exclude_users_from_group(admin_client: httpx.AsyncClient, simple_user: User, admin_user: User, group_service: GroupService):
+async def test_exclude_users_from_group(admin_client: httpx.AsyncClient, simple_user: User, admin_user: User, group_repo: GroupRepository, admin_group: Group):
     data = {
         'users': [
             simple_user.id
         ]
     }
-    admin_gr = await group_service.get_obj(Group.title == 'Admin')
-    await group_service.add_users(admin_gr, [simple_user])
+    admin_gr = await group_repo.get_group_and_users(admin_group.id)
+    await group_repo.add_users_in_group(admin_gr.id, [simple_user])
     assert admin_gr.users == [admin_user, simple_user]
     response = await admin_client.patch('/api/groups/{}/exclude_users'.format(admin_gr.id), json=data)
     expected = UserViewSchema.model_validate(
@@ -73,18 +74,18 @@ async def test_exclude_users_from_group(admin_client: httpx.AsyncClient, simple_
 
 
 @pytest_mark_asyncio
-async def test_exclude_users_from_group_fail(admin_client: httpx.AsyncClient, simple_user: User, admin_user: User, group_service: GroupService):
+async def test_exclude_users_from_group_fail(admin_client: httpx.AsyncClient, simple_user: User, admin_user: User, group_repo: GroupRepository, admin_group: Group):
     data = {
         'users': [
             simple_user.id+admin_user.id
         ]
     }
-    admin_gr = await group_service.get_obj(Group.title == 'Admin')
+    admin_gr = await group_repo.get_group_and_users(admin_group.id)
     assert admin_gr.users == [admin_user]
     response = await admin_client.patch('/api/groups/{}/exclude_users'.format(admin_gr.id), json=data)
     assert response.status_code == 400
-    assert response.json() == {
-        'detail': '"User" objects with next "id"s do not exist: {}'.format(data['users'][0])}
+    assert response.json() == {'detail': {'service': 'GroupService', 'msgs': [
+        f'"User" objects with next "id"s do not exist: {data['users'][0]}']}}
     assert admin_gr.users == [admin_user]
 
 

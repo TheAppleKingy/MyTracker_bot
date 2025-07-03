@@ -1,8 +1,6 @@
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import JSONB
 
-from security.password_utils import hash_password, check_password
 from .associations import users_groups
 from .tasks import Base
 
