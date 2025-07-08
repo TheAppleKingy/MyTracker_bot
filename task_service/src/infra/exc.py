@@ -13,11 +13,3 @@ class BaseCustomException(Exception):
             detail.update({'internal exception class': e.__class__.__name__})
         detail.update({'msgs': msg.split('\n')})
         self.detail = detail
-
-
-class ServiceError(BaseCustomException):
-    _layer_class_name = 'service'
-
-
-class RepositoryError(BaseCustomException):
-    _layer_class_name = 'repository'

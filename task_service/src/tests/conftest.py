@@ -61,9 +61,9 @@ async def setup(session: AsyncSession):
     group = Group(title='Other')
     session.add_all([admin_group, group])
     admin = User(tg_name='admin', email='admin@mail.ru',
-                 password=hash_password('test_password'), groups=[admin_group])
+                 password=hash_password('test_password'), groups=[admin_group], is_active=True)
     simple_user = User(tg_name='simple_user', email='simple@mail.ru',
-                       password=hash_password('test_password'), groups=[group])
+                       password=hash_password('test_password'), groups=[group], is_active=True)
     session.add_all([admin, simple_user])
     await session.flush()
     task1 = Task(title='t1', description='t1',

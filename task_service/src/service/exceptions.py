@@ -1,4 +1,8 @@
-from infra.exc import ServiceError
+from infra.exc import BaseCustomException
+
+
+class ServiceError(BaseCustomException):
+    _layer_class_name = 'service'
 
 
 class TaskServiceError(ServiceError):

@@ -1,3 +1,5 @@
+from typing import Sequence
+
 from fastapi import Depends, Cookie
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,6 +9,7 @@ from infra.db.repository.task_repo import TaskRepository
 from infra.db.repository.group_repo import GroupRepository
 from infra.db.repository.factories import UserRepoFactory, TaskRepoFactory, GroupRepositoryFactory
 from infra.db.models.users import User
+from infra.security.permissions.abstract import AbstractPermission
 from service.factories import UserServiceFactory, GroupServiceFactory, TaskServiceFactory
 from service.user_service import UserService, UserAuthService, UserPermissionService
 
@@ -31,12 +34,6 @@ def get_user_auth_service(user_repo: UserRepository = Depends(get_user_repo)):
     return UserServiceFactory.get_auth_service(user_repo)
 
 
-def get_perm_service_for(allowed_group_name: str):
-    def get_user_perm_service(user_repo: UserRepository = Depends(get_user_repo)):
-        return UserServiceFactory.get_permission_service(user_repo, allowed_group_name)
-    return get_user_perm_service
-
-
 def get_task_service(task_repo: TaskRepository = Depends(get_task_repo), user_repo: UserRepository = Depends(get_user_repo)):
     return TaskServiceFactory.get_service(task_repo, user_repo)
 
@@ -49,11 +46,9 @@ async def authenticate(token: str = Cookie(default=None, include_in_schema=False
     return await auth_service.auth_user(token)
 
 
-def get_user_allowed_by_group(allowed_group: str):
-    async def check_user(user: User = Depends(authenticate), perm_service: UserPermissionService = Depends(get_perm_service_for(allowed_group))):
-        return perm_service.check(user.id)
-    return check_user
-
-
-async def for_admin_only(user: User = Depends(authenticate), perm_service: UserPermissionService = Depends(get_perm_service_for('Admin'))):
-    return await perm_service.check(user.id)
+def check_permissions(*required_permissions: AbstractPermission):
+    def checker(user: User = Depends(authenticate)):
+        permission_service = UserServiceFactory.get_permission_service(
+            required_permissions)
+        return permission_service.check(user)
+    return checker
