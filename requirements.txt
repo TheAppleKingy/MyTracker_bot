@@ -21,6 +21,7 @@ google-auth-oauthlib
 greenlet
 httpcore
 httpx
+itsdangerous
 kombu
 loguru
 oauthlib

@@ -1,6 +1,7 @@
 from infra.db.repository.user_repo import UserRepository
 from infra.db.repository.task_repo import TaskRepository
 from infra.db.repository.group_repo import GroupRepository
+from infra.security.permissions.abstract import AbstractPermission
 
 from .group_service import GroupService
 from .user_service import UserService, UserAuthService, UserPermissionService
@@ -23,8 +24,8 @@ class UserServiceFactory:
         return UserAuthService(user_repository)
 
     @classmethod
-    def get_permission_service(cls, user_repository: UserRepository, allowed_group: str):
-        return UserPermissionService(user_repository, allowed_group)
+    def get_permission_service(cls, permission_objs: list[AbstractPermission]):
+        return UserPermissionService(permission_objs)
 
 
 class TaskServiceFactory:
