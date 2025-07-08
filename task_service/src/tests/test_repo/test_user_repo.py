@@ -3,7 +3,6 @@ import pytest
 from infra.db.repository.user_repo import UserRepository
 from infra.db.repository.exceptions import UserRepositoryError
 from infra.db.models.users import User
-from infra.db.models.tasks import Task
 
 
 pytest_mark_asyncio = pytest.mark.asyncio

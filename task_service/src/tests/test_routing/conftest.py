@@ -6,8 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from infra.db.session import get_db_session
 from app import app
-from infra.security.jwt import get_token_for_user
+from infra.security.token.factory import TokenHandlerFactory
 from infra.db.models.users import User
+from api.dependencies import get_user_auth_service
 
 
 @pytest_asyncio.fixture
@@ -20,13 +21,15 @@ async def client(session: AsyncSession):
 
 @pytest.fixture
 def admin_client(client: AsyncClient, admin_user: User):
-    token = get_token_for_user(admin_user)
+    jwt_handler = TokenHandlerFactory.get_jwt_handler()
+    token = jwt_handler.get_token_for_user(admin_user)
     client.cookies.set('token', token, domain='test.local')
     return client
 
 
 @pytest.fixture
 def simple_client(client: AsyncClient, simple_user: User):
-    token = get_token_for_user(simple_user)
+    jwt_handler = TokenHandlerFactory.get_jwt_handler()
+    token = jwt_handler.get_token_for_user(simple_user)
     client.cookies.set('token', token, domain='test.local')
     return client

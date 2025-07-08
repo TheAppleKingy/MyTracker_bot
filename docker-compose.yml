@@ -57,17 +57,6 @@ services:
   #   volumes:
   #     - esdata:/usr/share/elasticsearch/data
 
-  worker:
-    build:
-      context: .
-      dockerfile: worker/Dockerfile
-    env_file:
-      - .env
-    depends_on:
-      - redis
-    volumes:
-      - ./bots/src:/app/bots
-      - ./task_service/src:/app/task_service
 
   redis:
     image: redis:7.0.5-alpine
@@ -89,6 +78,20 @@ services:
     depends_on:
       - redis
       - worker
+
+  worker:
+    build:  
+      context: .
+      dockerfile: task_service/Dockerfile
+    env_file:
+      - .env
+    command: celery -A celery_app worker --loglevel=info --concurrency=${CELERY_WORKERS}
+    volumes:
+      - ./task_service/src:/src
+    environment:
+      - PYTHONPATH=/src
+    depends_on:
+      - redis
 
 volumes:
   db_data:

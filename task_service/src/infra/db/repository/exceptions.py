@@ -1,4 +1,8 @@
-from ...exc import RepositoryError
+from infra.exc import BaseCustomException
+
+
+class RepositoryError(BaseCustomException):
+    _layer_class_name = 'repository'
 
 
 class TaskRepositoryError(RepositoryError):
