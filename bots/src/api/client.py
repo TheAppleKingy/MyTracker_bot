@@ -2,21 +2,26 @@ import httpx
 
 import config
 
-from redis.asyncio import from_url
-
+from .redis_client import set_user_token, get_token
 from .response_handler import BackendResponse
 
 
 class BackendClient:
     def __init__(self, for_tg_name: str = None):
-        self.client = httpx.AsyncClient(base_url=config.BASE_API_URL)
         self.for_tg_name = for_tg_name
-        self.redis = from_url(config.REDIS_URL, decode_responses=True)
+
+    async def _web_client(self, authed: bool = True):
+        token = await get_token(self.for_tg_name)
+        web = httpx.AsyncClient(base_url=config.BASE_API_URL)
+        if authed:
+            web.cookies.set('token', token)
+        return web
 
     async def login(self, email: str, password: str):
-        response = BackendResponse(await self.client.post(url='profile/login', json={'email': email, 'password': password}))
-        token = self.client.cookies.get('token')
-        await self.redis.set(f'token:{self.for_tg_name}', token)
+        web = await self._web_client(authed=False)
+        response = BackendResponse(await web.post(url='profile/login', json={'email': email, 'password': password}))
+        token = web.cookies.get('token')
+        await set_user_token(token, self.for_tg_name)
         return response
 
     async def register(self, tg_name: str, email: str, first_name: str, last_name: str, password: str):
@@ -27,15 +32,28 @@ class BackendClient:
             "last_name": last_name,
             "password": password
         }
-        return BackendResponse(await self.client.post(url='profile/request/registration', json=data))
+        web = await self._web_client(authed=False)
+        return BackendResponse(await web.post(url='profile/request/registration', json=data))
 
     async def check_is_active(self):
-        return BackendResponse(await self.client.post('bot/check_is_active', json={'tg_name': self.for_tg_name}))
+        web = await self._web_client()
+        return BackendResponse(await web.post('bot/check_is_active', json={'tg_name': self.for_tg_name}))
 
     async def get_my_tasks(self):
-        token = await self.redis.get(f'token:{self.for_tg_name}')
-        return BackendResponse(await self.client.get('bot/my_tasks', cookies={'token': token}))
+        web = await self._web_client()
+        return BackendResponse(await web.get('bot/my_tasks'))
 
     async def get_my_task(self, task_id: int):
-        token = await self.redis.get(f'token:{self.for_tg_name}')
-        return BackendResponse(await self.client.get(f'bot/my_task/{task_id}', cookies={'token': token}))
+        web = await self._web_client()
+        return BackendResponse(await web.get(f'bot/my_task/{task_id}'))
+
+    async def create_task(self, title: str, description: str, creation_date: str, deadline: str, task_id: int = None):
+        data = {
+            'title': title,
+            'description': description,
+            'creation_date': creation_date,
+            'deadline': deadline,
+            'task_id': task_id,
+        }
+        web = await self._web_client()
+        return BackendResponse(await web.post('bot/create_task', json=data))

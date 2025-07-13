@@ -1,4 +1,4 @@
-from sqlalchemy import String
+from sqlalchemy import String, SmallInteger, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .associations import users_groups

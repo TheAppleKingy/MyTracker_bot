@@ -3,7 +3,9 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters.command import Command
 
 from keyboards.start import get_start_kb
-from .routers import start_router
+
+
+start_router = Router(name='Start')
 
 
 @start_router.message(Command("start"))

@@ -1,8 +1,8 @@
 """init
 
-Revision ID: 1c35861fdf62
+Revision ID: 4af94624fa2d
 Revises: 
-Create Date: 2025-06-18 15:44:10.752683
+Create Date: 2025-07-13 17:49:57.928014
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '1c35861fdf62'
-down_revision: Union[str, None] = None
+revision: str = '4af94624fa2d'
+down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -43,15 +43,15 @@ def upgrade() -> None:
     op.create_table('tasks',
     sa.Column('title', sa.String(length=100), nullable=False),
     sa.Column('description', sa.String(length=500), nullable=False),
-    sa.Column('creation_date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('deadline', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('pass_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('creation_date', sa.DateTime(), nullable=False),
+    sa.Column('deadline', sa.DateTime(), nullable=False),
+    sa.Column('pass_date', sa.DateTime(), nullable=True),
     sa.Column('done', sa.Boolean(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('task_id', sa.Integer(), nullable=True),
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], name=op.f('fk_tasks_task_id_tasks')),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_tasks_user_id_users')),
+    sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], name=op.f('fk_tasks_task_id_tasks'), ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_tasks_user_id_users'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_tasks')),
     sa.UniqueConstraint('id', name=op.f('uq_tasks_id'))
     )

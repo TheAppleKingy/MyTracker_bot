@@ -18,9 +18,9 @@ class BackendResponseMiddleware(BaseMiddleware):
             return await handler(event, data)
         except NotAuthenticatedError as e:
             if isinstance(event, CallbackQuery):
-                await event.message.answer(str(e), reply_markup=login_kb())
+                await event.message.answer('You have to login', reply_markup=login_kb())
             elif isinstance(event, Message):
-                await event.answer(str(e), reply_markup=login_kb())
+                await event.answer('You have to login', reply_markup=login_kb())
             return
         except BackendError as e:
             if isinstance(event, CallbackQuery):

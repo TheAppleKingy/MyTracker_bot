@@ -1,7 +1,7 @@
 from aiogram import types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from api.schemas import Task
+from api.schemas import TaskViewSchema
 
 
 def get_my_tasks_kb():
@@ -11,10 +11,10 @@ def get_my_tasks_kb():
     return builder.as_markup()
 
 
-def add_subtask_kb():
+def add_subtask_kb(for_task_id: int = 0):
     builder = InlineKeyboardBuilder()
     builder.add(types.InlineKeyboardButton(
-        text="Add subtask", callback_data='create_task'))
+        text="Add subtask", callback_data=f'create_subtask_{for_task_id}'))
     return builder.as_markup()
 
 
@@ -38,7 +38,7 @@ def back_kb():
     return builder.as_markup()
 
 
-def task_buttons(tasks: list[Task]):
+def task_buttons(tasks: list[TaskViewSchema]):
     builder = InlineKeyboardBuilder()
     for task in tasks:
         builder.add(types.InlineKeyboardButton(
@@ -46,7 +46,7 @@ def task_buttons(tasks: list[Task]):
     return builder
 
 
-def tasks_kb(tasks: list[Task], additional_buttons: list[types.InlineKeyboardButton] = []):
+def tasks_kb(tasks: list[TaskViewSchema], additional_buttons: list[types.InlineKeyboardButton] = []):
     builder = task_buttons(tasks)
     for add in additional_buttons:
         builder.add(add)
@@ -56,9 +56,9 @@ def tasks_kb(tasks: list[Task], additional_buttons: list[types.InlineKeyboardBut
     return builder.as_markup()
 
 
-def root_list_kb(tasks: list[Task]):
+def root_list_kb(tasks: list[TaskViewSchema]):
     return tasks_kb(tasks, [create_task_kb().inline_keyboard[0][0]])
 
 
-def subtasks_list_kb(subtasks: list[Task]):
+def subtasks_list_kb(subtasks: list[TaskViewSchema]):
     return tasks_kb(subtasks, [add_subtask_kb().inline_keyboard[0][0], update_task_kb().inline_keyboard[0][0], back_kb().inline_keyboard[0][0]])

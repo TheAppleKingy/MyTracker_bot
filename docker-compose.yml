@@ -23,7 +23,7 @@ services:
     environment:
       - AUTO_RELOAD=true
     command: >
-      sh -c "python run.py"
+      sh -c "python main.py"
     volumes:
       - ./bots/src:/app/src
 

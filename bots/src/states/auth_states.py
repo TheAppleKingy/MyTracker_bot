@@ -12,3 +12,4 @@ class RegistrationStates(StatesGroup):
     waiting_first_name = State()
     waiting_last_name = State()
     waiting_password = State()
+    waiting_tz = State()

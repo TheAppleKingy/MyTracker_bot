@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 from pydantic import BaseModel, Field
 
@@ -7,7 +7,8 @@ from pydantic import BaseModel, Field
 class TaskCreateSchema(BaseModel):
     title: str = Field(max_length=100)
     description: str = Field(max_length=500)
-    deadline: Optional[datetime] = None
+    creation_date: datetime
+    deadline: datetime
     user_id: int
     task_id: Optional[int] = None
 
@@ -33,7 +34,7 @@ class TaskViewSchema(BaseModel):
     task_id: Optional[int] = None
 
 
-class TaskTreeSchema(TaskViewSchema):
+class TaskTreeSchema(BaseModel):
     subtasks: list['TaskTreeSchema']
 
 
@@ -52,9 +53,11 @@ class TaskViewForUserSchema(BaseModel):
 
 
 class TaskCreateForUserSchema(BaseModel):
+    id: Optional[int] = None
     title: str = Field(max_length=100)
     description: str = Field(max_length=500)
-    deadline: Optional[datetime] = None
+    creation_date: datetime
+    deadline: datetime
     task_id: Optional[int] = None
 
 
