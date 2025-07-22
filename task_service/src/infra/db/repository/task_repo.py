@@ -24,10 +24,10 @@ class TaskRepository(InitRepo):
         return await self._repo.create_db_obj(**task_data)
 
     async def delete_task(self, id: int) -> Task:
-        return await self._repo.delete_db_objs(Task.id == id)
+        return await self._repo.delete_db_obj(Task.id == id)
 
     async def update_task(self, id: int, **kwargs) -> Task:
-        return await self._repo.update_db_objs(Task.id == id, **kwargs)
+        return await self._repo.update_db_obj(Task.id == id, **kwargs)
 
     async def get_nested_tasks(self, from_task_id: int, return_list: bool = False) -> Task | list[Task]:
         query = text(f"""WITH RECURSIVE task_tree AS (

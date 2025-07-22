@@ -9,7 +9,6 @@ docker-compose up --build
 docker-compose exec app alembic upgrade head
 ```
 
-На данном этапе разрабатывается API и архитектура серверной части. Вскоре начнется разработка бота
 
 * Технологии:
 * * бэкенд - **FastaAPI**

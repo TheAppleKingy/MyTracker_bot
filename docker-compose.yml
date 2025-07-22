@@ -12,7 +12,7 @@ services:
     command: >
       sh -c "uvicorn app:app --host 0.0.0.0 --port 8000 --reload"
     volumes:
-      - ./task_service/src:/src
+      - ./task_service/src:/app/src
 
   bots_service:
     build:
@@ -20,12 +20,12 @@ services:
       dockerfile: bots/Dockerfile
     env_file:
       - .env
-    ports:
-      - "8001:8001"
+    environment:
+      - AUTO_RELOAD=true
     command: >
-      sh -c "uvicorn app:app --host 0.0.0.0 --port 8001 --reload"
+      sh -c "python main.py"
     volumes:
-      - ./bots/src:/src
+      - ./bots/src:/app/src
 
   database:
     image: postgres:14.6-alpine
@@ -33,16 +33,6 @@ services:
       - db_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-    env_file:
-      - .env
-
-  rabbitmq:
-    image: rabbitmq:3-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
     env_file:
       - .env
 
@@ -87,9 +77,9 @@ services:
       - .env
     command: celery -A celery_app worker --loglevel=info --concurrency=${CELERY_WORKERS}
     volumes:
-      - ./task_service/src:/src
+      - ./task_service/src:/app/src
     environment:
-      - PYTHONPATH=/src
+      - PYTHONPATH=/app/src
     depends_on:
       - redis
 

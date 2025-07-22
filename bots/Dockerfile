@@ -1,9 +1,17 @@
-FROM python:3.12-alpine3.20
+FROM python:3.13.5-alpine3.22
 
-COPY /bots/src /src
+RUN apk add --no-cache curl
 
-WORKDIR /src
-EXPOSE 8002
+COPY bots/src /app/src
+COPY bots/pyproject.toml bots/poetry.lock /app/
 
-COPY ../../requirements.txt /temp/requirements.txt
-RUN pip install -r /temp/requirements.txt
+WORKDIR /app
+
+RUN curl -sSL https://install.python-poetry.org | python3 -
+
+ENV PATH="/root/.local/bin:$PATH"
+
+RUN poetry config virtualenvs.create false && \
+    poetry install --no-root --no-interaction --no-ansi
+
+WORKDIR /app/src

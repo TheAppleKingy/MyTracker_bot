@@ -1,6 +1,6 @@
 from datetime import datetime, timezone, timedelta
 
-from sqlalchemy import String, DateTime, ForeignKey
+from sqlalchemy import String, DateTime, ForeignKey, BigInteger, Float
 from sqlalchemy.orm import relationship, mapped_column, validates, Mapped
 
 from .associations import Base
@@ -11,11 +11,10 @@ class Task(Base):
     title: Mapped[str] = mapped_column(String(100))
     description: Mapped[str] = mapped_column(String(500))
     creation_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.now(tz=timezone.utc))
-    deadline: Mapped[datetime] = mapped_column(DateTime(
-        timezone=True), default=datetime.now(tz=timezone.utc)+timedelta(days=7))
+        DateTime(timezone=True))
+    deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     pass_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None)
+        DateTime(timezone=True), nullable=True)
     done: Mapped[bool] = mapped_column(default=False)
     user: Mapped['User'] = relationship(
         back_populates='tasks', lazy='selectin')

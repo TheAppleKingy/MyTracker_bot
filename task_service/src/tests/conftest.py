@@ -3,6 +3,8 @@ import pytest_asyncio
 import os
 import asyncpg
 
+from datetime import datetime, timezone, timedelta
+
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncEngine, AsyncSession
@@ -67,11 +69,11 @@ async def setup(session: AsyncSession):
     session.add_all([admin, simple_user])
     await session.flush()
     task1 = Task(title='t1', description='t1',
-                 task_id=None, user_id=simple_user.id)
+                 task_id=None, user_id=simple_user.id, creation_date=datetime.now(timezone.utc), deadline=datetime.now(timezone.utc)+timedelta(days=7))
     session.add(task1)
     await session.flush()
     sub1 = Task(title='s1', description='s1',
-                task_id=task1.id, user_id=simple_user.id)
+                task_id=task1.id, user_id=simple_user.id, creation_date=datetime.now(timezone.utc), deadline=datetime.now(timezone.utc)+timedelta(days=7))
     session.add_all([task1, sub1])
     await session.commit()
 
