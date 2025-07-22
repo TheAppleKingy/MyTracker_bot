@@ -1,5 +1,3 @@
-from typing import Sequence
-
 from fastapi import Depends, Cookie
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,7 +9,8 @@ from infra.db.repository.factories import UserRepoFactory, TaskRepoFactory, Grou
 from infra.db.models.users import User
 from infra.security.permissions.abstract import AbstractPermission
 from service.factories import UserServiceFactory, GroupServiceFactory, TaskServiceFactory
-from service.user_service import UserService, UserAuthService, UserPermissionService
+from service.user_service import UserAuthService
+from service.exceptions import UserAuthServiceError
 
 
 def get_user_repo(session: AsyncSession = Depends(get_db_session)):

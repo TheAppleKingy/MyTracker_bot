@@ -66,7 +66,8 @@ class TaskService:
         return finished
 
     async def add_task_to_user(self, user_id: int, task_schema: TaskCreateForUserSchema):
-        return await self.repo.create_task(**task_schema.model_dump(exclude_none=True), user_id=user_id)
+        created = await self.repo.create_task(**task_schema.model_dump(exclude_none=True), user_id=user_id)
+        return await self.get_user_task_tree(user_id, created.id)
 
     async def update_task_for_user(self, user_id: int, task_id: int, task_update_schema: TaskUpdateForUserSchema):
         user = await self.user_repo.get_user_and_tasks(user_id)
@@ -74,7 +75,7 @@ class TaskService:
             raise TaskServiceError(
                 f'Task ({task_id}) does not belong to user ({user_id})')
         updated = await self.repo.update_task(task_id, **task_update_schema.model_dump(exclude_none=True))
-        return updated
+        return await self.get_user_task_tree(user_id, updated.id)
 
     async def finish_task_for_user(self, user_id: int, task_id: int):
         task = await self.repo.get_task(task_id)

@@ -37,3 +37,7 @@ class UserInGroupSchema(BaseModel):
 class ChangePasswordSchema(BaseModel):
     current_password: str
     new_password: str
+
+
+class CheckIsActiveSchema(BaseModel):
+    tg_name: str

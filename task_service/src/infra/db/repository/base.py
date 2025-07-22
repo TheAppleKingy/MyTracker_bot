@@ -60,20 +60,19 @@ class BaseRepo:
         return res
 
     @commitable
-    async def delete_db_objs(self, *conditions: ColumnElement[bool]) -> list[T]:
+    async def delete_db_obj(self, *conditions: ColumnElement[bool]) -> T:
         """commitable method"""
         query = delete(self.model).where(*conditions).returning(self.model)
         res = await self.session.execute(query)
-        return res.scalars().all()
+        return res.scalar_one_or_none()
 
     @commitable
-    async def update_db_objs(self, *conditions: ColumnElement[bool], **kwargs) -> list[T]:
+    async def update_db_obj(self, *conditions: ColumnElement[bool], **kwargs) -> T:
         """commitable method"""
         query = update(self.model).where(
             *conditions).values(**kwargs).returning(self.model)
         res = await self.session.execute(query)
-        updated = res.scalars().all()
-        return updated
+        return res.scalar_one_or_none()
 
     @commitable
     async def create_db_obj(self, **kwargs) -> T:
@@ -95,7 +94,8 @@ class BaseRepo:
         await self.session.commit()
 
     async def refresh(self, obj: T, field_names: list[str] = None):
-        await self.session.refresh(obj, attribute_names=field_names)
+        if obj:
+            await self.session.refresh(obj, attribute_names=field_names)
 
     async def execute_query(self, query: TextClause):
         return await self.session.execute(query)

@@ -2,7 +2,6 @@ from infra.db.models.users import User
 from infra.db.models.tasks import Task
 from infra.db.repository.user_repo import UserRepository
 from infra.db.repository.task_repo import TaskRepository
-from infra.db.repository.group_repo import GroupRepository
 from infra.security.password_utils import hash_password, check_password
 from infra.security.token.factory import TokenHandlerFactory as handler_factory
 from infra.security.token.exceptions import TokenError
@@ -34,6 +33,16 @@ class UserAuthService(BaseUserService):
         if not check_password(password, user.password):
             raise UserAuthServiceError(
                 'Wrong password')
+
+    async def check_user_active(self, tg_name: str):
+        users = await self.repo.get_users_by(User.tg_name == tg_name)
+        if not users:
+            raise UserAuthServiceError(
+                f'User with tg_name ({tg_name}) does not exist')
+        user = users[0]
+        if not user.is_active:
+            raise UserAuthServiceError(
+                f'User with tg_name ({tg_name}) is not active')
 
     async def validate_user_by_url_token(self, token: str, token_handler: TokenHandler):
         try:
