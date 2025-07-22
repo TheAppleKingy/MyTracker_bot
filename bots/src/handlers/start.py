@@ -2,7 +2,7 @@ from aiogram import types, Router
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters.command import Command
 
-from keyboards.start import get_start_kb
+from keyboards.auth import get_start_kb
 
 
 start_router = Router(name='Start')

@@ -3,9 +3,9 @@ from datetime import datetime, timezone
 from aiogram import types, F, Router
 from aiogram.fsm.context import FSMContext
 
-from keyboards.tasks import add_subtask_kb
+from keyboards.tasks import for_task_info_kb
 from api.client import BackendClient
-from api.schemas import TaskCreatedSchema
+from api.schemas import TaskViewSchema
 from api.redis_client import get_user_tz, set_user_tz_val
 from states.task_states import CreateTaskStates
 
@@ -58,8 +58,8 @@ async def ask_deadline(message: types.Message, state: FSMContext):
     await state.clear()
     client = BackendClient(message.from_user.username)
     response = await client.create_task(**data)
-    task = TaskCreatedSchema(**response.json)
-    await message.answer(task.show_to_message(user_tz), reply_markup=add_subtask_kb(task.id))
+    task = TaskViewSchema(**response.json)
+    await message.answer(task.show_to_message(user_tz), reply_markup=for_task_info_kb(task))
     await state.clear()
 
 

@@ -46,6 +46,7 @@ class TaskViewForUserSchema(BaseModel):
     deadline: datetime
     pass_date: Optional[datetime]
     done: bool
+    task_id: Optional[int]
     subtasks: list['TaskViewForUserSchema']
 
     class Config:
@@ -53,7 +54,6 @@ class TaskViewForUserSchema(BaseModel):
 
 
 class TaskCreateForUserSchema(BaseModel):
-    id: Optional[int] = None
     title: str = Field(max_length=100)
     description: str = Field(max_length=500)
     creation_date: datetime

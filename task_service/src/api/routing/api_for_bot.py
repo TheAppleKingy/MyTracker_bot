@@ -29,12 +29,12 @@ async def get_my_task(id: int, user: User = Depends(authenticate), task_service:
     return await task_service.get_task_tree(id)
 
 
-@bot_router.post('/create_task', response_model=TaskCreateForUserSchema)
+@bot_router.post('/create_task', response_model=TaskViewForUserSchema)
 async def create_task(task_data: TaskCreateForUserSchema, user: User = Depends(authenticate), task_service: TaskService = Depends(get_task_service)):
     return await task_service.add_task_to_user(user.id, task_data)
 
 
-@bot_router.patch('/update_task/{id}', response_model=TaskUpdateSchema)
+@bot_router.patch('/update_task/{id}', response_model=TaskViewForUserSchema)
 async def update_task(id: int, data: TaskUpdateForUserSchema, user: User = Depends(authenticate), task_service: TaskService = Depends(get_task_service)):
     return await task_service.update_task_for_user(user.id, id, data)
 

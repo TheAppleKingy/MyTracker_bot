@@ -4,7 +4,6 @@ import watchfiles
 
 import config
 
-from redis.asyncio import from_url
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.redis import RedisStorage
 
@@ -13,6 +12,7 @@ from handlers.auth.registration import registration_router
 from handlers.start import start_router
 from handlers.tasks.show_tasks import show_task_router
 from handlers.tasks.create_tasks import create_task_router
+from handlers.tasks.update_task import update_task_router
 from middleware import BackendResponseMiddleware
 
 
@@ -25,7 +25,7 @@ dispatcher.callback_query.middleware(BackendResponseMiddleware())
 
 async def start():
     dispatcher.include_routers(
-        start_router, login_router, registration_router, show_task_router, create_task_router)
+        start_router, login_router, registration_router, show_task_router, create_task_router, update_task_router)
     await dispatcher.start_polling(bot)
 
 
