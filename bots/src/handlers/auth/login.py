@@ -1,12 +1,9 @@
-import config
-
 from aiogram import Router, F, types
 from aiogram.fsm.context import FSMContext
 from redis.asyncio import from_url
 
 from states.auth_states import LoginStates
 from api.client import BackendClient
-from api.exc import BackendError
 from keyboards.tasks import get_my_tasks_kb
 
 

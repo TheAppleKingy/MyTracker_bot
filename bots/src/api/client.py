@@ -13,9 +13,9 @@ class BackendClient:
         self.for_tg_name = for_tg_name
 
     async def _web_client(self, authed: bool = True):
-        token = await get_token(self.for_tg_name)
         web = httpx.AsyncClient(base_url=config.BASE_API_URL)
         if authed:
+            token = await get_token(self.for_tg_name)
             web.cookies.set('token', token)
         return web
 

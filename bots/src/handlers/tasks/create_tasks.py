@@ -2,12 +2,14 @@ from datetime import datetime, timezone
 
 from aiogram import types, F, Router
 from aiogram.fsm.context import FSMContext
+from aiogram3_calendar import simple_cal_callback
 
-from keyboards.tasks import for_task_info_kb
+from keyboards.tasks import for_task_info_kb, kalendar_kb, reminders_time_kb, yes_or_no_kb
 from api.client import BackendClient
 from api.schemas import TaskViewSchema
 from api.redis_client import get_user_tz, set_user_tz_val
-from states.task_states import CreateTaskStates
+from states.task_states import CreateTaskStates, RemindTimeCountState
+from tasks.notify import notify
 
 
 create_task_router = Router(name='Create tasks')
@@ -55,12 +57,60 @@ async def ask_deadline(message: types.Message, state: FSMContext):
     creation_date_utc = datetime.now(timezone.utc)
     await state.update_data(deadline=deadline_utc.isoformat(), creation_date=creation_date_utc.isoformat())
     data = await state.get_data()
-    await state.clear()
     client = BackendClient(message.from_user.username)
     response = await client.create_task(**data)
     task = TaskViewSchema(**response.json)
-    await message.answer(task.show_to_message(user_tz), reply_markup=for_task_info_kb(task))
+    await message.answer("Task created! Do you want i will remind you about deadline?", reply_markup=yes_or_no_kb('add_reminder', f'get_task_{task.id}'))
+    await state.update_data(task=task.model_dump_json())
+
+
+@create_task_router.callback_query(F.data == 'add_reminder')
+async def add_reminder(cq: types.CallbackQuery, state: FSMContext):
+    await cq.answer()
+    await cq.message.answer("Choose remind date", reply_markup=await kalendar_kb())
+    await state.update_data(remind_times=[])
+
+
+@create_task_router.callback_query(simple_cal_callback.filter())
+async def ask_remind_time(cq: types.CallbackQuery, callback_data: simple_cal_callback, state: FSMContext):
+    await cq.answer()
+    date = datetime(year=callback_data.year,
+                    month=callback_data.month, day=callback_data.day)
+    data = await state.get_data()
+    task = TaskViewSchema.model_validate_json(data.get('task'))
+    user_tz = await get_user_tz(cq.from_user.username)
+    deadline_local = task.deadline.astimezone(user_tz)
+    remind_times = data.get('remind_times')
+    remind_times.append(date.strftime('%d.%m.%Y'))
+    await state.update_data(remind_times=remind_times)
+    await cq.message.answer("Choose time", reply_markup=reminders_time_kb(deadline_local.hour))
+
+
+@create_task_router.callback_query(F.data.startswith('set_remind_hour_'))
+async def set_remind_hour(cq: types.CallbackQuery, state: FSMContext):
+    await cq.answer()
+    print("time got")
+    remind_hour = int(cq.data.split('_')[-1])
+    data = await state.get_data()
+    remind_times = data.get('remind_times')
+    current_remind_date = datetime.strptime(remind_times[-1], '%d.%m.%Y')
+    current_remind_datetime = current_remind_date.replace(hour=remind_hour)
+    user_tz = await get_user_tz(cq.from_user.username)
+    remind_datetime_utc = current_remind_datetime.replace(
+        tzinfo=user_tz).astimezone(timezone.utc)
+    task = TaskViewSchema.model_validate_json(data.get('task'))
+    deadline_utc = task.deadline
+    remained_time = deadline_utc - remind_datetime_utc
+    remained_time_str = ''
+    print(remind_datetime_utc)
+    if remained_time.days >= 1:
+        remained_time_str += f'{remained_time.days} days'
+    else:
+        remained_time_str += f'{remained_time.seconds//3600}'
+    notify.apply_async(args=[task.title, remained_time_str,
+                       cq.message.chat.id], eta=remind_datetime_utc)
     await state.clear()
+    await cq.message.answer("Done! ")
 
 
 @create_task_router.callback_query(F.data.startswith('create_subtask_'))

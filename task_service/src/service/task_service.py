@@ -22,6 +22,7 @@ class TaskService:
     async def check_is_root_for_user(self, user_id: int, task_id: int):
         user_root_tasks = await self.get_root_tasks_for_user(user_id)
         target_task = await self.repo.get_task(task_id)
+        print(user_root_tasks, target_task)
         if not target_task in user_root_tasks:
             raise TaskServiceError(
                 f'Task ({target_task.title}) is not task for user ({user_id})')
@@ -43,7 +44,7 @@ class TaskService:
         return [await self.get_task_tree(task, return_list=return_lists) for task in from_task_ids]
 
     async def get_user_task_tree(self, user_id: int, root_task_id: int, return_list: bool = False):
-        self.check_is_root_for_user(user_id, root_task_id)
+        await self.check_is_root_for_user(user_id, root_task_id)
         return await self.get_task_tree(root_task_id, return_list=return_list)
 
     async def get_user_tasks_trees(self, user_id: int, return_lists: bool = False):

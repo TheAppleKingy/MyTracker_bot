@@ -42,7 +42,7 @@ async def change_task_title(message: types.Message, state: FSMContext):
     response = await client.update_task(task_id=task_id, title=new_title)
     task = TaskViewSchema(**response.json)
     user_tz = await get_user_tz(message.from_user.username)
-    await message.answer(task.show_to_message(user_tz), reply_markup=for_task_info_kb(task))
+    await message.answer(task.show_to_message(user_tz), reply_markup=for_task_info_kb(task), parse_mode='HTML')
     await state.clear()
 
 
@@ -54,7 +54,7 @@ async def change_task_description(message: types.Message, state: FSMContext):
     response = await client.update_task(task_id=task_id, description=new_description)
     task = TaskViewSchema(**response.json)
     user_tz = await get_user_tz(message.from_user.username)
-    await message.answer(task.show_to_message(user_tz), reply_markup=for_task_info_kb(task))
+    await message.answer(task.show_to_message(user_tz), reply_markup=for_task_info_kb(task), parse_mode='HTML')
     await state.clear()
 
 
@@ -68,7 +68,7 @@ async def change_task_deadline(message: types.Message, state: FSMContext):
     client = BackendClient(message.from_user.username)
     response = await client.update_task(task_id=task_id, deadline=formatted.isoformat())
     task = TaskViewSchema(**response.json)
-    await message.answer(task.show_to_message(user_tz), reply_markup=for_task_info_kb(task))
+    await message.answer(task.show_to_message(user_tz), reply_markup=for_task_info_kb(task), parse_mode='HTML')
     await state.clear()
 
 

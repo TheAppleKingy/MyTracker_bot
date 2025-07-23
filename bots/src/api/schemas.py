@@ -10,12 +10,14 @@ class TaskSchema(BaseModel):
         for field_name in self.__class__.model_fields:
             if (not field_name in exclude):
                 val = getattr(self, field_name, None)
+                if field_name == 'pass_date' and not val:
+                    continue
                 if isinstance(val, datetime):
                     dt = val.astimezone(user_tz)
                     val = dt.strftime('%d.%m.%Y at %H:%M')
-                view += field_name.capitalize().replace('_', ' ') + \
+                view += "<b>"+field_name.capitalize().replace('_', ' ') + "</b>" + \
                     f': {val}\n--------------\n'
-        view += 'Subtasks:'
+        view += '<b>Subtasks:</b>'
         return view
 
 

@@ -1,5 +1,4 @@
 from aiogram import types, Router
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters.command import Command
 
 from keyboards.auth import get_start_kb

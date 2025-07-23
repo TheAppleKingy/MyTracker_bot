@@ -1,4 +1,3 @@
-from aiogram import F
 from aiogram.fsm.state import StatesGroup, State
 
 

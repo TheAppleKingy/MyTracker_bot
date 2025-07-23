@@ -1,7 +1,9 @@
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from aiogram import types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram3_calendar import SimpleCalendar, simple_cal_callback
 
 from api.schemas import TaskViewSchema
 
@@ -106,4 +108,45 @@ def for_task_update_kb(for_task_id: int):
         back_button(for_task_id)
     )
     builder.adjust(*[1, 1, 1, 1, 1])
+    return builder.as_markup()
+
+
+async def kalendar_kb():
+    calendar = SimpleCalendar()
+    return await calendar.start_calendar()
+
+
+def reminders_time_kb(deadline_hour: int):
+    builder = InlineKeyboardBuilder()
+    buttons = [
+        types.InlineKeyboardButton(
+            text=f"{i}",
+            callback_data=f"set_remind_hour_{i}"
+        )
+        for i in range(1, deadline_hour)
+    ]
+
+    for i in range(0, len(buttons), 4):
+        builder.row(*buttons[i:i+4])
+
+    return builder.as_markup()
+
+
+def add_reminder_kb():
+    builder = InlineKeyboardBuilder()
+    builder.add(
+        types.InlineKeyboardButton(
+            text="Add reminder", callback_data='add_reminder'),
+    )
+    return builder.as_markup()
+
+
+def yes_or_no_kb(yes_callback_data: str = '', no_callback_data: str = ''):
+    builder = InlineKeyboardBuilder()
+    builder.add(
+        types.InlineKeyboardButton(
+            text="Yes", callback_data=yes_callback_data),
+        types.InlineKeyboardButton(
+            text="No", callback_data=no_callback_data),
+    )
     return builder.as_markup()
