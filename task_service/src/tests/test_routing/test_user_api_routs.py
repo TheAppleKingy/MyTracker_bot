@@ -5,9 +5,9 @@ import asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infra.db.models.users import User
-from infra.db.models.associations import users_groups
-from api.schemas.users_schemas import UserViewSchema, UserUpdateSchema
+from domain.entities.users import User
+from infra.db.tables.associations import users_groups
+from application.dto.users_dto import UserView, UserUpdate
 
 
 pytest_mark_asyncio = pytest.mark.asyncio
@@ -44,7 +44,7 @@ async def test_create_already_exists(admin_client: httpx.AsyncClient):
 async def test_get_user(admin_client: httpx.AsyncClient, simple_user: User):
     response = await admin_client.get('/api/users/{}'.format(simple_user.id))
     assert response.status_code == 200
-    assert response.json() == UserViewSchema.model_validate(
+    assert response.json() == UserView.model_validate(
         simple_user, from_attributes=True).model_dump()
 
 
@@ -58,7 +58,7 @@ async def test_get_user_none(admin_client: httpx.AsyncClient):
 @pytest_mark_asyncio
 async def test_get_users(admin_client: httpx.AsyncClient, admin_user: User, simple_user: User):
     response = await admin_client.get('/api/users')
-    expected = [UserViewSchema.model_validate(
+    expected = [UserView.model_validate(
         obj, from_attributes=True).model_dump() for obj in [admin_user, simple_user]]
     assert response.status_code == 200
     assert response.json() == expected
@@ -74,7 +74,7 @@ async def test_update(admin_client: httpx.AsyncClient, simple_user: User):
     assert simple_user.first_name != data['first_name']
     response = await admin_client.patch('/api/users/{}'.format(simple_user.id), json=data)
     assert response.status_code == 200
-    assert response.json() == [UserUpdateSchema.model_validate(
+    assert response.json() == [UserView.model_validate(
         simple_user, from_attributes=True).model_dump()]
     assert simple_user.email == data['email']
     assert simple_user.first_name == data['first_name']

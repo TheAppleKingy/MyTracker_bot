@@ -2,9 +2,9 @@ import pytest
 
 from datetime import datetime, timezone
 
-from infra.db.models.tasks import Task
+from domain.entities.tasks import Task
 from infra.db.repository.task_repo import TaskRepository
-from infra.db.repository.exceptions import TaskRepositoryError
+from domain.repositories.exceptions import TaskRepositoryError
 
 
 pytest_mark_asyncio = pytest.mark.asyncio

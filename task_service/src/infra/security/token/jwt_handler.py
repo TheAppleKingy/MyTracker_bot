@@ -1,7 +1,5 @@
 import jwt
 
-import config
-
 from datetime import datetime, timezone, timedelta
 
 from .exceptions import TokenError

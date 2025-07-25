@@ -1,8 +1,6 @@
-import config
-
 from itsdangerous import URLSafeTimedSerializer, BadSignature
 
-from infra.db.models.users import User
+from domain.entities.users import User
 from .base_handler import TokenHandler
 from .exceptions import TokenError
 

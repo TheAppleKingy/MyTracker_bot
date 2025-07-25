@@ -1,11 +1,11 @@
 import pytest
 
-from infra.db.repository.user_repo import UserRepository
-from infra.db.repository.group_repo import GroupRepository
-from infra.db.repository.task_repo import TaskRepository
-from service.task_service import TaskService
-from service.user_service import UserService, UserAuthService, UserPermissionService
-from service.group_service import GroupService
+from domain.repositories.user_repository import AbstractUserRepository
+from domain.repositories.group_repository import AbstractGroupRepository
+from domain.repositories.task_repository import AbstractTaskRepository
+from application.service.task import TaskService
+from application.service.user import UserAuthDataService, UserAuthService, UserPermissionService
+from application.service.group import GroupService
 
 
 @pytest.fixture
@@ -45,17 +45,17 @@ def mock_serializer_handler(mocker):
 
 
 @pytest.fixture
-def task_service(mock_task_repo: TaskRepository, mock_user_repo: UserRepository):
+def task_service(mock_task_repo: AbstractTaskRepository, mock_user_repo: AbstractUserRepository):
     return TaskService(mock_task_repo, mock_user_repo)
 
 
 @pytest.fixture
-def user_service(mock_user_repo: UserRepository, mock_task_repo):
-    return UserService(mock_user_repo, mock_task_repo)
+def user_auth_data_service(mock_user_repo: AbstractUserRepository):
+    return UserAuthDataService(mock_user_repo)
 
 
 @pytest.fixture
-def auth_service(mock_user_repo: UserRepository):
+def auth_service(mock_user_repo: AbstractUserRepository):
     return UserAuthService(mock_user_repo)
 
 
@@ -65,5 +65,5 @@ def permission_service():
 
 
 @pytest.fixture
-def group_service(mock_group_repo: GroupRepository, mock_user_repo: UserRepository):
+def group_service(mock_group_repo: AbstractGroupRepository, mock_user_repo: AbstractUserRepository):
     return GroupService(mock_group_repo, mock_user_repo)

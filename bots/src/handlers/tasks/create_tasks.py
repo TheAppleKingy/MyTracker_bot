@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from aiogram import types, F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram3_calendar import simple_cal_callback
+from aiogram3_calendar import simple_cal_callback, SimpleCalendar as calendar
 
 from keyboards.tasks import for_task_info_kb, kalendar_kb, reminders_time_kb, yes_or_no_kb
 from api.client import BackendClient
@@ -74,8 +74,9 @@ async def add_reminder(cq: types.CallbackQuery, state: FSMContext):
 @create_task_router.callback_query(simple_cal_callback.filter())
 async def ask_remind_time(cq: types.CallbackQuery, callback_data: simple_cal_callback, state: FSMContext):
     await cq.answer()
-    date = datetime(year=callback_data.year,
-                    month=callback_data.month, day=callback_data.day)
+    selected, date = await calendar().process_selection(cq, callback_data)
+    if not selected:
+        return
     data = await state.get_data()
     task = TaskViewSchema.model_validate_json(data.get('task'))
     user_tz = await get_user_tz(cq.from_user.username)
@@ -89,7 +90,6 @@ async def ask_remind_time(cq: types.CallbackQuery, callback_data: simple_cal_cal
 @create_task_router.callback_query(F.data.startswith('set_remind_hour_'))
 async def set_remind_hour(cq: types.CallbackQuery, state: FSMContext):
     await cq.answer()
-    print("time got")
     remind_hour = int(cq.data.split('_')[-1])
     data = await state.get_data()
     remind_times = data.get('remind_times')

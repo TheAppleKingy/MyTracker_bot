@@ -1,7 +1,6 @@
 from typing import Sequence
 
-from infra.db.models.users import User
-from infra.db.models.users import User
+from domain.entities.users import User, Group
 from .abstract import AbstractPermission
 from .exc import PermissionException
 

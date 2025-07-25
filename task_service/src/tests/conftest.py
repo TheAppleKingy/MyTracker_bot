@@ -10,12 +10,12 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncEngine, AsyncSession
 
 from config import FORMATTED_DATABASE_URL, TEST_DATABASE_URL
-from infra.db.models.base import Base
-from infra.db.models.users import User, Group
-from infra.db.models.tasks import Task
+from infra.db.tables.base import Base
+from domain.entities.users import User, Group
+from domain.entities.tasks import Task
 from infra.security.password_utils import hash_password
-from infra.db.repository.factories import UserRepoFactory, GroupRepositoryFactory, TaskRepoFactory, BaseRepoFactory
-from service.factories import UserServiceFactory, GroupServiceFactory, TaskServiceFactory
+from infra.db.repository.factories import UserRepoFactory, GroupRepositoryFactory, TaskRepoFactory
+from application.service.factories import UserServiceFactory, GroupServiceFactory, TaskServiceFactory
 
 
 test_db_name = os.getenv('TEST_DB_NAME')

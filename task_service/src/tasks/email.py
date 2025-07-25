@@ -2,12 +2,12 @@ import smtplib
 
 from email.mime.text import MIMEText
 
-from celery import shared_task
+from celery_app import celery
 
-from config import FROM_EMAIL, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, EMAIL_HOST, EMAIL_PORT
+from config import FROM_EMAIL, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, EMAIL_HOST, EMAIL_PORT, QUEUE
 
 
-@shared_task
+@celery.task(queue=QUEUE)
 def send_mail(topic: str, message: str, to_email: str):
     msg = MIMEText(message)
     msg['Subject'] = topic

@@ -1,8 +1,8 @@
 import pytest
 
 from infra.db.repository.user_repo import UserRepository
-from infra.db.repository.exceptions import UserRepositoryError
-from infra.db.models.users import User
+from domain.repositories.exceptions import UserRepositoryError
+from domain.entities.users import User
 
 
 pytest_mark_asyncio = pytest.mark.asyncio

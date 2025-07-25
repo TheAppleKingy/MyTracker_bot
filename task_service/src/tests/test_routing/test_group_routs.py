@@ -2,11 +2,10 @@ import pytest
 import httpx
 import asyncio
 
-from infra.db.models.users import User, Group
+from domain.entities.users import User, Group
 from infra.db.repository.group_repo import GroupRepository
-from service.group_service import GroupService
-from api.schemas.users_schemas import UserViewSchema
-from api.schemas.groups_schemas import GroupVeiwSchema
+from application.dto.users_dto import UserView
+from application.dto.groups_dto import GroupView
 
 
 pytest_mark_asyncio = pytest.mark.asyncio
@@ -17,7 +16,7 @@ async def test_get_groups(admin_client: httpx.AsyncClient, group_repo: GroupRepo
     response = await admin_client.get('/api/groups')
     assert response.status_code == 200
     groups = await group_repo.get_all_groups()
-    expected = [GroupVeiwSchema.model_validate(
+    expected = [GroupView.model_validate(
         obj, from_attributes=True).model_dump() for obj in groups]
     assert response.json() == expected
 
@@ -33,7 +32,7 @@ async def test_add_users_into_group(admin_client: httpx.AsyncClient, simple_user
     assert admin_gr.users == [admin_user]
     response = await admin_client.patch('/api/groups/{}/add_users'.format(admin_gr.id), json=data)
     assert response.status_code == 200
-    expected = UserViewSchema.model_validate(
+    expected = UserView.model_validate(
         simple_user, from_attributes=True).model_dump()
     assert response.json() == [expected]
     assert admin_gr.users == [admin_user, simple_user]
@@ -66,7 +65,7 @@ async def test_exclude_users_from_group(admin_client: httpx.AsyncClient, simple_
     await group_repo.add_users_in_group(admin_gr.id, [simple_user])
     assert admin_gr.users == [admin_user, simple_user]
     response = await admin_client.patch('/api/groups/{}/exclude_users'.format(admin_gr.id), json=data)
-    expected = UserViewSchema.model_validate(
+    expected = UserView.model_validate(
         simple_user, from_attributes=True).model_dump()
     assert response.status_code == 200
     assert response.json() == [expected]

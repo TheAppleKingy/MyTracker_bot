@@ -1,12 +1,12 @@
 import pytest
 
-from infra.db.models.users import User
-from infra.db.models.tasks import Task
+from domain.entities.users import User
+from domain.entities.tasks import Task
 from infra.db.repository.user_repo import UserRepository
 from infra.db.repository.task_repo import TaskRepository
-from service.task_service import TaskService
-from service.exceptions import TaskServiceError
-from api.schemas.task_schemas import TaskCreateForUserSchema, TaskUpdateForUserSchema
+from application.service.task import TaskService
+from application.service.exceptions import TaskServiceError
+from application.dto.task_dto import TaskCreateForUser, TaskUpdateForUser
 
 
 pytest_mark_asyncio = pytest.mark.asyncio
@@ -129,7 +129,7 @@ async def test_finish_task_fail_unfinished_subtasks(task_service: TaskService, m
 
 @pytest_mark_asyncio
 async def test_add_task_to_user(task_service: TaskService, mock_task_repo: TaskRepository, mocker):
-    schema = TaskCreateForUserSchema(
+    schema = TaskCreateForUser(
         title="Test", task_id=None, description='test desc')
     mock_task_repo.create_task = mocker.AsyncMock(return_value="created")
     result = await task_service.add_task_to_user(1, schema)
@@ -141,7 +141,7 @@ async def test_update_task_for_user_success(task_service: TaskService, mock_user
     mock_user_repo.get_user_and_tasks = mocker.AsyncMock(
         return_value=User(id=1, tasks=[Task(id=1)]))
     mock_task_repo.update_task = mocker.AsyncMock(return_value="updated")
-    schema = TaskUpdateForUserSchema(title="Updated")
+    schema = TaskUpdateForUser(title="Updated")
     result = await task_service.update_task_for_user(1, 1, schema)
     assert result == "updated"
 
@@ -150,7 +150,7 @@ async def test_update_task_for_user_success(task_service: TaskService, mock_user
 async def test_update_task_for_user_fail(task_service: TaskService, mock_user_repo: UserRepository, mocker):
     mock_user_repo.get_user_and_tasks = mocker.AsyncMock(
         return_value=User(id=1, tasks=[]))
-    schema = TaskUpdateForUserSchema(title="Updated")
+    schema = TaskUpdateForUser(title="Updated")
     with pytest.raises(TaskServiceError):
         await task_service.update_task_for_user(1, 1, schema)
 

@@ -6,13 +6,12 @@ import config
 from datetime import datetime, timedelta
 
 from freezegun import freeze_time
-
-from infra.db.models.users import User
+from domain.entities.users import User
 from infra.db.repository.user_repo import UserRepository
 from infra.security.token.factory import TokenHandlerFactory
 from infra.security.password_utils import check_password
-from api.schemas.users_schemas import UserViewSchema
-from service.exceptions import UserAuthServiceError
+from application.dto.users_dto import UserView
+from application.service.exceptions import UserAuthServiceError
 
 
 pytest_mark_asyncio = pytest.mark.asyncio

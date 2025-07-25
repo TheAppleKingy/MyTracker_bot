@@ -1,6 +1,6 @@
 import pytest
 
-from infra.db.models.users import User, Group
+from domain.entities.users import User, Group
 from infra.db.repository.group_repo import GroupRepository
 
 
