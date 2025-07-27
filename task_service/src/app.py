@@ -5,15 +5,9 @@ app = FastAPI()
 
 
 def include_routers():
-    from interfaces.api.routing.user_routs import user_router
     from interfaces.api.routing.auth_routs import profile_router
-    from interfaces.api.routing.groups_routs import group_router
-    from interfaces.api.routing.task_routs import task_router
     from interfaces.api.routing.api_for_bot import bot_router
-    app.include_router(user_router)
     app.include_router(profile_router)
-    app.include_router(group_router)
-    app.include_router(task_router)
     app.include_router(bot_router)
 
 

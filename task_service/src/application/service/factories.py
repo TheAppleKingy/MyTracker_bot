@@ -1,18 +1,10 @@
-from domain.repositories.group_repository import AbstractGroupRepository
 from domain.repositories.task_repository import AbstractTaskRepository
 from domain.repositories.user_repository import AbstractUserRepository
 
 from infra.security.permissions.abstract import AbstractPermission
 
-from .group import GroupService
 from .user import UserAuthService, UserPermissionService, UserAuthDataService
 from .task import TaskService
-
-
-class GroupServiceFactory:
-    @classmethod
-    def get_service(cls, group_repository: AbstractGroupRepository, user_repository: AbstractUserRepository):
-        return GroupService(group_repository, user_repository)
 
 
 class UserServiceFactory:

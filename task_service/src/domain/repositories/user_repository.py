@@ -17,9 +17,6 @@ class AbstractUserRepository(ABC):
     async def get_user_by_email(self, email: str) -> User | None: ...
 
     @abstractmethod
-    async def get_user_and_groups(self, id: int) -> User | None: ...
-
-    @abstractmethod
     async def get_user_and_tasks(self, id: int) -> User | None: ...
 
     @abstractmethod

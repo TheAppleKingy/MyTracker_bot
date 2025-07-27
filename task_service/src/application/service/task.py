@@ -3,6 +3,7 @@ from typing import Sequence
 from domain.entities.tasks import Task
 from domain.repositories.task_repository import AbstractTaskRepository
 from domain.repositories.user_repository import AbstractUserRepository
+from domain.repositories.exceptions import TaskRepositoryError
 
 from application.dto.task_dto import TaskCreateForUser, TaskUpdateForUser
 
@@ -14,12 +15,16 @@ class TaskService:
         self.repo = task_repository
         self.user_repo = user_repository
 
+    def check_belongs_to_user(self, user_id: int, task: Task):
+        if task.user_id != user_id:
+            raise TaskServiceError(f'Task {task.id} does not belong to user ')
+
     async def check_is_root_for_user(self, user_id: int, task_id: int):
-        user_root_tasks = await self.repo.get_root_tasks_for_user(user_id)
-        target_task = await self.repo.get_task(task_id)
-        if not target_task in user_root_tasks:
+        task = await self.repo.get_task(task_id)
+        self.check_belongs_to_user(user_id, task)
+        if not task.is_root():
             raise TaskServiceError(
-                f'Task {target_task.id} is not task for user {user_id}')
+                f'Task {task.id} is not root task for user {user_id}')
 
     async def get_full_trees(self, return_lists: bool = False):
         roots = await self.repo.get_root_tasks()
@@ -28,7 +33,10 @@ class TaskService:
 
     async def get_task_tree(self, from_task_id: Task, return_list: bool = False):
         """Returns root of task tree or all tasks of tree starting from task has id = from_task_id"""
-        return await self.repo.get_nested_tasks(from_task_id, return_list=return_list)
+        try:
+            return await self.repo.get_nested_tasks(from_task_id, return_list=return_list)
+        except TaskRepositoryError as e:
+            raise TaskServiceError(str(e))
 
     async def get_tasks_trees(self, from_task_ids: Sequence[int], return_lists: bool = False):
         return [await self.get_task_tree(task, return_list=return_lists) for task in from_task_ids]
@@ -64,12 +72,10 @@ class TaskService:
         return await self.get_user_task_tree(user_id, created.id)
 
     async def update_task_for_user(self, user_id: int, task_id: int, task_update_schema: TaskUpdateForUser):
-        user = await self.user_repo.get_user_and_tasks(user_id)
-        if not any([task.id == task_id for task in user.tasks]):
-            raise TaskServiceError(
-                f'Task {task_id} does not belong to user {user_id}')
-        updated = await self.repo.update_task(task_id, **task_update_schema.model_dump(exclude_none=True))
-        return await self.get_user_task_tree(user_id, updated.id)
+        task = await self.get_task_tree(task_id)
+        self.check_belongs_to_user(user_id, task)
+        await self.repo.update_task(task_id, **task_update_schema.model_dump(exclude_none=True))
+        return task
 
     async def finish_task_for_user(self, user_id: int, task_id: int):
         task = await self.repo.get_task(task_id)

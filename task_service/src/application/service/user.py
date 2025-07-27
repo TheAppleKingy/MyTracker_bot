@@ -40,20 +40,18 @@ class UserAuthService(BaseUserAuthService):
 
 
 class UserAuthDataService(BaseUserAuthService):
+    async def check_is_active(self, tg_name: str):
+        users = await self.repo.get_users_by(User.tg_name == tg_name)
+        if not users:
+            raise UserAuthDataServiceError(
+                f"User with tg name {tg_name} does not exist")
+        if not users[0].is_active:
+            raise UserAuthDataServiceError('User not active')
+
     def check_user_password(self, password: str, user: User):
         if not check_password(password, user.password):
             raise UserAuthDataServiceError(
                 'Wrong password')
-
-    async def check_user_active(self, tg_name: str):
-        users = await self.repo.get_users_by(User.tg_name == tg_name)
-        if not users:
-            raise UserAuthDataServiceError(
-                f'User with tg_name {tg_name} does not exist')
-        user = users[0]
-        if not user.is_active:
-            raise UserAuthDataServiceError(
-                f'User with tg_name {tg_name} is not active')
 
     async def validate_user_by_url_token(self, token: str, token_handler: TokenHandler):
         try:
@@ -66,7 +64,7 @@ class UserAuthDataService(BaseUserAuthService):
         user = await self.repo.get_user_by_email(email)
         if not user:
             raise UserAuthDataServiceError(
-                f'Unable to find user with email ({email})')
+                f'Unable to find user with email {email}')
         self.check_user_password(password, user)
         return user
 

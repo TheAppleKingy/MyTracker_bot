@@ -12,20 +12,17 @@ from .auto_commit import commitable
 
 class UserRepository(AbstractUserRepository):
     async def get_user(self, id: int) -> User | None:
-        return await self.session.get(User, id)
+        return await self.session.scalar(select(User).where(User.id == id))
 
     async def get_user_by_email(self, email: str) -> User | None:
         return await self.session.scalar(select(User).where(User.email == email))
 
-    async def get_user_and_groups(self, id: int) -> User | None:
-        return await self.session.get(User, id, options=[selectinload(User.groups)])
-
     async def get_user_and_tasks(self, id: int) -> User | None:
-        return await self.session.get(User, id, options=[selectinload(User.tasks)])
+        return await self.session.scalar(select(User).where(User.id == id).options(selectinload(User.tasks)))
 
     async def get_users_by(self, *conditions: ColumnElement[bool]) -> list[User]:
         db_resp = await self.session.scalars(select(User).where(*conditions))
-        return [u for u in db_resp.all()]
+        return db_resp.all()
 
     @commitable
     async def create_user(self, **user_data: dict) -> User:

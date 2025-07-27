@@ -11,11 +11,11 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, Asyn
 
 from config import FORMATTED_DATABASE_URL, TEST_DATABASE_URL
 from infra.db.tables.base import Base
-from domain.entities.users import User, Group
+from domain.entities.users import User
 from domain.entities.tasks import Task
 from infra.security.password_utils import hash_password
-from infra.db.repository.factories import UserRepoFactory, GroupRepositoryFactory, TaskRepoFactory
-from application.service.factories import UserServiceFactory, GroupServiceFactory, TaskServiceFactory
+from infra.db.repository.factories import UserRepoFactory, TaskRepoFactory
+from application.service.factories import UserServiceFactory, TaskServiceFactory
 
 
 test_db_name = os.getenv('TEST_DB_NAME')
@@ -59,13 +59,10 @@ async def session(engine: AsyncEngine):
 
 @pytest_asyncio.fixture(autouse=True)
 async def setup(session: AsyncSession):
-    admin_group = Group(title='Admin')
-    group = Group(title='Other')
-    session.add_all([admin_group, group])
     admin = User(tg_name='admin', email='admin@mail.ru',
-                 password=hash_password('test_password'), groups=[admin_group], is_active=True)
+                 password=hash_password('test_password'), is_active=True)
     simple_user = User(tg_name='simple_user', email='simple@mail.ru',
-                       password=hash_password('test_password'), groups=[group], is_active=True)
+                       password=hash_password('test_password'), is_active=True)
     session.add_all([admin, simple_user])
     await session.flush()
     task1 = Task(title='t1', description='t1',
@@ -86,28 +83,6 @@ def user_repo(session: AsyncSession):
 @pytest.fixture
 def task_repo(session: AsyncSession):
     return TaskRepoFactory.get_task_repository(session)
-
-
-@pytest.fixture
-def group_repo(session: AsyncSession):
-    return GroupRepositoryFactory.get_group_repository(session)
-
-
-@pytest_asyncio.fixture
-async def admin_group(session: AsyncSession):
-    query = select(Group).where(Group.title == 'Admin').options(
-        selectinload(Group.users))
-    res = await session.execute(query)
-    group = res.scalar_one_or_none()
-    return group
-
-
-@pytest_asyncio.fixture
-async def admin_user(session: AsyncSession):
-    query = select(User).where(User.tg_name == 'admin')
-    res = await session.execute(query)
-    user = res.scalar_one_or_none()
-    return user
 
 
 @pytest_asyncio.fixture

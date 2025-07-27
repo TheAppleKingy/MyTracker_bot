@@ -6,7 +6,7 @@ from sqlalchemy.orm import relationship, mapped_column, Mapped, validates
 
 from application.service.exceptions import TaskServiceError
 
-from infra.db.tables.associations import Base
+from infra.db.tables.base import Base
 
 
 if TYPE_CHECKING:

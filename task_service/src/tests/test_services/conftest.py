@@ -1,24 +1,14 @@
 import pytest
 
 from domain.repositories.user_repository import AbstractUserRepository
-from domain.repositories.group_repository import AbstractGroupRepository
 from domain.repositories.task_repository import AbstractTaskRepository
 from application.service.task import TaskService
 from application.service.user import UserAuthDataService, UserAuthService, UserPermissionService
-from application.service.group import GroupService
 
 
 @pytest.fixture
 def mock_task_repo(mocker):
     return mocker.Mock()
-
-
-@pytest.fixture
-def mock_group_repo(mocker):
-    repo = mocker.Mock()
-    repo.add_users_in_group = mocker.AsyncMock()
-    repo.exclude_users_from_group = mocker.AsyncMock()
-    return repo
 
 
 @pytest.fixture
@@ -50,7 +40,7 @@ def task_service(mock_task_repo: AbstractTaskRepository, mock_user_repo: Abstrac
 
 
 @pytest.fixture
-def user_auth_data_service(mock_user_repo: AbstractUserRepository):
+def auth_data_service(mock_user_repo: AbstractUserRepository):
     return UserAuthDataService(mock_user_repo)
 
 
@@ -62,8 +52,3 @@ def auth_service(mock_user_repo: AbstractUserRepository):
 @pytest.fixture
 def permission_service():
     return UserPermissionService([])
-
-
-@pytest.fixture
-def group_service(mock_group_repo: AbstractGroupRepository, mock_user_repo: AbstractUserRepository):
-    return GroupService(mock_group_repo, mock_user_repo)

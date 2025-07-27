@@ -10,7 +10,7 @@ from .auto_commit import commitable
 
 class TaskRepository(AbstractTaskRepository):
     async def get_task(self, id: int) -> Task | None:
-        return await self.session.get(Task, id, options=[selectinload(Task.user)])
+        return await self.session.scalar(select(Task).where(Task.id == id))
 
     async def get_root_tasks(self) -> list[Task]:
         db_resp = await self.session.scalars(select(Task).where(Task.task_id == None).options(selectinload(Task.user)))

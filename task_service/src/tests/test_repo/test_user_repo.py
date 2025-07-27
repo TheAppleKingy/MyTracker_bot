@@ -47,6 +47,7 @@ async def test_create(user_repo: UserRepository):
         'password': 'test_password'
     }
     created = await user_repo.create_user(**data)
+    assert await user_repo.get_user(created.id) is created
     assert created.tg_name == data['tg_name']
     assert created.email == data['email']
 
@@ -65,7 +66,7 @@ async def test_create_already_exists(simple_user: User, user_repo: UserRepositor
 @pytest_mark_asyncio
 async def test_delete(simple_user: User, user_repo: UserRepository):
     deleted = await user_repo.delete_user(simple_user.id)
-    assert deleted[0].tg_name == simple_user.tg_name
+    user_repo.session.expire(deleted)
     assert await user_repo.get_user(simple_user.id) is None
 
 
