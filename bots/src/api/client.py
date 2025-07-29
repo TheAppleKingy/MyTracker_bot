@@ -38,7 +38,7 @@ class BackendClient:
         return BackendResponse(await web.post(url='profile/request/registration', json=data))
 
     async def check_is_active(self):
-        web = await self._web_client()
+        web = await self._web_client(authed=False)
         return BackendResponse(await web.post('bot/check_is_active', json={'tg_name': self.for_tg_name}))
 
     async def get_my_tasks(self):

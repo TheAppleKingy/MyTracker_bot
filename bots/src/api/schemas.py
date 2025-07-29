@@ -28,7 +28,6 @@ class TaskViewSchema(TaskSchema):
     creation_date: datetime
     deadline: datetime
     pass_date: Optional[datetime]
-    done: Optional[bool]
     task_id: Optional[int] = None
     subtasks: list['TaskViewSchema'] = []
 

@@ -13,11 +13,17 @@ from handlers.start import start_router
 from handlers.tasks.show_tasks import show_task_router
 from handlers.tasks.create_tasks import create_task_router
 from handlers.tasks.update_task import update_task_router
+from handlers.tasks.task_reminder import reminder_router
+from handlers.settings.cmd_settings import settings_router
+from handlers.settings.set_tz import tz_router
+
+from api.redis_client import redis
+
 from middleware import BackendResponseMiddleware
 
 
 bot = Bot(config.TOKEN)
-redis_storage = RedisStorage(config.redis)
+redis_storage = RedisStorage(redis)
 dispatcher = Dispatcher(storage=redis_storage)
 dispatcher.message.middleware(BackendResponseMiddleware())
 dispatcher.callback_query.middleware(BackendResponseMiddleware())
@@ -25,7 +31,16 @@ dispatcher.callback_query.middleware(BackendResponseMiddleware())
 
 async def start():
     dispatcher.include_routers(
-        start_router, login_router, registration_router, show_task_router, create_task_router, update_task_router)
+        start_router,
+        login_router,
+        registration_router,
+        show_task_router,
+        create_task_router,
+        update_task_router,
+        reminder_router,
+        settings_router,
+        tz_router
+    )
     await dispatcher.start_polling(bot)
 
 

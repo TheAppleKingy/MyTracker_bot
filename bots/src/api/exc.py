@@ -10,5 +10,5 @@ class NoTimezoneError(BackendError):
     pass
 
 
-class RegistrationError(BackendError):
+class TimezoneAPIError(Exception):
     pass

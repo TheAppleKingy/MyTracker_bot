@@ -21,10 +21,12 @@ class TaskService:
 
     async def check_is_root_for_user(self, user_id: int, task_id: int):
         task = await self.repo.get_task(task_id)
+        print(task, 'task for checkin')
         self.check_belongs_to_user(user_id, task)
         if not task.is_root():
             raise TaskServiceError(
                 f'Task {task.id} is not root task for user {user_id}')
+        print('is root')
 
     async def get_full_trees(self, return_lists: bool = False):
         roots = await self.repo.get_root_tasks()
@@ -69,7 +71,7 @@ class TaskService:
 
     async def add_task_to_user(self, user_id: int, task_schema: TaskCreateForUser):
         created = await self.repo.create_task(**task_schema.model_dump(exclude_none=True), user_id=user_id)
-        return await self.get_user_task_tree(user_id, created.id)
+        return await self.get_task_tree(created.id)
 
     async def update_task_for_user(self, user_id: int, task_id: int, task_update_schema: TaskUpdateForUser):
         task = await self.get_task_tree(task_id)

@@ -1,4 +1,4 @@
-from .exc import BackendError, NotAuthenticatedError, RegistrationError
+from .exc import BackendError, NotAuthenticatedError
 
 from httpx import Response
 
@@ -12,10 +12,9 @@ class BackendResponse:
         if self.status == 401:
             raise NotAuthenticatedError()
         if self.status >= 400:
-            detail = api_response.json().get('detail')
-            msg = detail.get('msgs')[0]
+            msg = api_response.json().get('detail')
             raise BackendError(msg)
 
     @property
-    def json(self):
+    def json(self) -> dict:
         return self._response.json()

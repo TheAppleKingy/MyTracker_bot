@@ -1,5 +1,5 @@
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, timezone
+from typing import Optional, Literal
 
 from aiogram import types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -31,6 +31,11 @@ def update_task_button(task_id: int):
 def back_button(to_id: int):
     return types.InlineKeyboardButton(
         text="Back", callback_data=f'get_task_{to_id}')
+
+
+def add_reminder_button(for_id: int):
+    return types.InlineKeyboardButton(
+        text="Add reminder", callback_data=f'add_reminder_{for_id}')
 
 
 def get_my_tasks_kb():
@@ -87,9 +92,9 @@ def root_list_kb(tasks: list[TaskViewSchema]):
 
 def for_task_info_kb(task: TaskViewSchema):
     buttons = []
-    if not task.done:
+    if not bool(task.pass_date):
         buttons += [add_subtask_button(
-            task.id), update_task_button(task.id)]
+            task.id), update_task_button(task.id), add_reminder_button(task.id)]
     if task.task_id:
         buttons.append(back_button(task.task_id))
     buttons.append(my_tasks_button())
@@ -121,14 +126,14 @@ async def kalendar_kb(year: Optional[int] = None, month: Optional[int] = None):
     return await SimpleCalendar.start_calendar(year, month)
 
 
-def reminders_time_kb(deadline_hour: int):
+def time_kb(time_of: str, action: Literal['set', 'update'] = 'set', from_hour: int = 0, to_hour: int = 24):
     builder = InlineKeyboardBuilder()
     buttons = [
         types.InlineKeyboardButton(
             text=f"0{i}h:00m" if i <= 9 else f"{i}h:00m",
-            callback_data=f"set_remind_hour_{i}"
+            callback_data=f"{action}_{time_of}_hour_{i}"
         )
-        for i in range(1, deadline_hour)
+        for i in range(from_hour, to_hour)
     ]
 
     for i in range(0, len(buttons), 4):
@@ -137,12 +142,33 @@ def reminders_time_kb(deadline_hour: int):
     return builder.as_markup()
 
 
+def deadline_time_kb(user_tz: timezone, selected_date: datetime, for_update: bool = False):
+    current_time_local = datetime.now(timezone.utc).astimezone(user_tz)
+    action = 'set'
+    if for_update:
+        action = 'update'
+    if current_time_local.day == selected_date.day:
+        return time_kb('deadline', action, from_hour=current_time_local.hour + 1)
+    if selected_date.day > current_time_local.day:
+        return time_kb('deadline', action)
+
+
+def remind_time_kb(deadline_local: datetime, selected_date: datetime):
+    user_tz = deadline_local.tzinfo
+    current_time_local = datetime.now(timezone.utc).astimezone(user_tz)
+    if deadline_local.day == current_time_local.day:
+        return time_kb('remind', current_time_local.hour + 1, deadline_local.hour - 1)
+    if deadline_local.day > current_time_local.day:
+        if current_time_local.day == selected_date.day:
+            return time_kb('remind', from_hour=current_time_local.hour + 1)
+        if selected_date.day == deadline_local.day:
+            return time_kb('remind', to_hour=deadline_local.hour - 1)
+        return time_kb('remind')
+
+
 def add_reminder_kb():
     builder = InlineKeyboardBuilder()
-    builder.add(
-        types.InlineKeyboardButton(
-            text="Add reminder", callback_data='add_reminder'),
-    )
+    builder.add(add_reminder_button())
     return builder.as_markup()
 
 

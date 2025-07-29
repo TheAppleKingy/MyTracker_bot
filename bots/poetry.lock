@@ -979,6 +979,33 @@ files = [
 ]
 
 [[package]]
+name = "pycountries"
+version = "1.2.1"
+description = "List of existing countries and currencies"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "pycountries-1.2.1-py3-none-any.whl", hash = "sha256:fb9d530ed1bc75a0ae7fafe8a6d069c672643636a0217fc81b0aa60016c6aeb0"},
+    {file = "pycountries-1.2.1.tar.gz", hash = "sha256:2c885528a9b0efe631c5e70959453a79febcf00063676c4781c460c45bfd55e6"},
+]
+
+[package.dependencies]
+pydantic = ">=1.5"
+
+[[package]]
+name = "pycountry"
+version = "24.6.1"
+description = "ISO country, subdivision, language, currency and script definitions and their translations"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "pycountry-24.6.1-py3-none-any.whl", hash = "sha256:f1a4fb391cd7214f8eefd39556d740adcc233c778a27f8942c8dca351d6ce06f"},
+    {file = "pycountry-24.6.1.tar.gz", hash = "sha256:b61b3faccea67f87d10c1f2b0fc0be714409e8fcdcc1315613174f6466c10221"},
+]
+
+[[package]]
 name = "pydantic"
 version = "2.11.7"
 description = "Data validation using Python type hints"
@@ -1524,4 +1551,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13"
-content-hash = "b877224d57712f87d176c311e65372a0d4ddc711286249dbd540469294a73009"
+content-hash = "f1ff125d1444eb38cfbd7cf797e7f765c49180638c7c36476b669c2d707f76ee"
