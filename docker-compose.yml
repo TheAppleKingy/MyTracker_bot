@@ -36,18 +36,6 @@ services:
     env_file:
       - .env
 
-  # elasticsearch:
-  #   image: elasticsearch:8.16.2
-  #   ports:
-  #     - 9200:9200
-  #     - 9300:9300
-  #   environment:
-  #     - discovery.type=single-node
-  #     - xpack.security.enabled=false
-  #   volumes:
-  #     - esdata:/usr/share/elasticsearch/data
-
-
   redis:
     image: redis:7.0.5-alpine
     hostname: redis
@@ -67,21 +55,37 @@ services:
       - .env
     depends_on:
       - redis
-      - worker
+      - task_service_worker
+      - bot_worker
 
-  worker:
+  task_service_worker:
     build:  
       context: .
       dockerfile: task_service/Dockerfile
     env_file:
       - .env
-    command: celery -A celery_app worker --loglevel=info --concurrency=${CELERY_WORKERS}
+    command: celery -A celery_app worker --loglevel=info --concurrency=${CELERY_WORKERS} -Q ${TASK_SERVICE_QUEUE}
     volumes:
       - ./task_service/src:/app/src
     environment:
       - PYTHONPATH=/app/src
     depends_on:
       - redis
+
+  bot_worker:
+    build:  
+      context: .
+      dockerfile: bots/Dockerfile
+    env_file:
+      - .env
+    command: celery -A celery_app worker --loglevel=info --concurrency=${CELERY_WORKERS} -Q ${BOT_QUEUE}
+    volumes:
+      - ./bots/src:/app/src
+    environment:
+      - PYTHONPATH=/app/src
+    depends_on:
+      - redis
+    
 
 volumes:
   db_data:

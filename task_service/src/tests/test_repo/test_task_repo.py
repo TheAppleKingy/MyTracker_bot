@@ -1,10 +1,8 @@
 import pytest
 
-from datetime import datetime, timezone
-
-from infra.db.models.tasks import Task
+from domain.entities.tasks import Task
 from infra.db.repository.task_repo import TaskRepository
-from infra.db.repository.exceptions import TaskRepositoryError
+from domain.repositories.exceptions import TaskRepositoryError
 
 
 pytest_mark_asyncio = pytest.mark.asyncio
@@ -33,19 +31,3 @@ async def test_get_nested_none(task_repo: TaskRepository):
 async def test_get_nested_one(task1: Task, task_repo: TaskRepository):
     task = await task_repo.get_nested_tasks(task1.subtasks[0].id)
     assert task == task1.subtasks[0]
-
-
-@pytest_mark_asyncio
-async def test_finish_task(task1: Task, task_repo: TaskRepository):
-    assert not task1.done
-    finished = await task_repo.finish_task(task1)
-    assert finished.id == task1.id
-    assert task1.done
-
-
-@pytest_mark_asyncio
-async def test_finish_already_done(task1: Task, task_repo: TaskRepository):
-    task1.pass_date = datetime.now(timezone.utc)
-    task1.done = True
-    with pytest.raises(TaskRepositoryError):
-        await task_repo.finish_task(task1)

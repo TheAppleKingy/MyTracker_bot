@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from infra.db.models.users import User
+from domain.entities.users import User
 
 
 class AbstractPermission(ABC):

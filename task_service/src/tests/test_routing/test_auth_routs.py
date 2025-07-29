@@ -6,13 +6,12 @@ import config
 from datetime import datetime, timedelta
 
 from freezegun import freeze_time
-
-from infra.db.models.users import User
+from domain.entities.users import User
 from infra.db.repository.user_repo import UserRepository
 from infra.security.token.factory import TokenHandlerFactory
 from infra.security.password_utils import check_password
-from api.schemas.users_schemas import UserViewSchema
-from service.exceptions import UserAuthServiceError
+from application.dto.users_dto import UserView
+from application.service.exceptions import UserAuthServiceError
 
 
 pytest_mark_asyncio = pytest.mark.asyncio
@@ -51,7 +50,7 @@ async def test_registration_request(simple_client: httpx.AsyncClient, user_repo:
         'email': 'user@mail.ru',
         'password': 'test-password'
     }
-    mock_send_mail = mocker.patch('service.user_service.send_mail.delay')
+    mock_send_mail = mocker.patch('application.service.user.send_mail.delay')
     response = await simple_client.post(urls['profile']['registration_request'], json=data)
     assert response.status_code == 200
     registered = await user_repo.get_user_by_email(data['email'])
@@ -63,17 +62,16 @@ async def test_registration_request(simple_client: httpx.AsyncClient, user_repo:
 
 
 @pytest_mark_asyncio
-async def test_registration_request_fail(simple_client: httpx.AsyncClient, admin_user: User):
+async def test_registration_request_fail(simple_client: httpx.AsyncClient, simple_user: User):
     data = {
-        'tg_name': admin_user.tg_name,
+        'tg_name': simple_user.tg_name,
         'email': 'user@mail.ru',
         'password': 'test-password'
     }
     response = await simple_client.post(urls['profile']['registration_request'], json=data)
     assert response.status_code == 400
-    assert response.json() == {'detail': {'internal exception class': 'IntegrityError',
-                                          'msgs': [f'Key (tg_name)=({admin_user.tg_name}) already exists.'],
-                                          'repository': 'UserRepository'}}
+    assert response.json() == {
+        'detail': f'User with tg_name {simple_user.tg_name} already exists'}
 
 
 @pytest_mark_asyncio
@@ -83,7 +81,7 @@ async def test_confirm_registration(simple_client: httpx.AsyncClient, user_repo:
         'email': 'user@mail.ru',
         'password': 'test-password'
     }
-    mock_send_mail = mocker.patch('service.user_service.send_mail.delay')
+    mock_send_mail = mocker.patch('application.service.user.send_mail.delay')
     await simple_client.post(urls['profile']['registration_request'], json=data)
     registered = await user_repo.get_user_by_email(data['email'])
     assert not registered.is_active
@@ -103,7 +101,7 @@ async def test_confirm_registration_invalid_token(simple_client: httpx.AsyncClie
         'email': 'user@mail.ru',
         'password': 'test-password'
     }
-    mock_send_mail = mocker.patch('service.user_service.send_mail.delay')
+    mock_send_mail = mocker.patch('application.service.user.send_mail.delay')
     await simple_client.post(urls['profile']['registration_request'], json=data)
     registered = await user_repo.get_user_by_email(data['email'])
     args, kwargs = mock_send_mail.call_args
@@ -111,8 +109,7 @@ async def test_confirm_registration_invalid_token(simple_client: httpx.AsyncClie
     token = url.split('/')[-1][:-1]
     response = await simple_client.get(urls['profile']['registration_confirm'].format(token=token))
     assert response.status_code == 400
-    assert response.json() == {'detail': {
-        'msgs': ['Wrong url or expired'], 'service': 'UserAuthService'}}
+    assert response.json() == {'detail': 'Wrong url or expired'}
     assert not registered.is_active
 
 
@@ -123,7 +120,7 @@ async def test_confirm_registration_token_expired(simple_client: httpx.AsyncClie
         'email': 'user@mail.ru',
         'password': 'test-password'
     }
-    mock_send_mail = mocker.patch('service.user_service.send_mail.delay')
+    mock_send_mail = mocker.patch('application.service.user.send_mail.delay')
     await simple_client.post(urls['profile']['registration_request'], json=data)
     registered = await user_repo.get_user_by_email(data['email'])
     args, kwargs = mock_send_mail.call_args
@@ -132,8 +129,7 @@ async def test_confirm_registration_token_expired(simple_client: httpx.AsyncClie
     with freeze_time(datetime.now()+timedelta(seconds=config.URL_EXPIRE_TIME+3)):
         response = await simple_client.get(urls['profile']['registration_confirm'].format(token=token))
         assert response.status_code == 400
-        assert response.json() == {'detail': {
-            'msgs': ['Wrong url or expired'], 'service': 'UserAuthService'}}
+        assert response.json() == {'detail': 'Wrong url or expired'}
         assert not registered.is_active
 
 
@@ -144,18 +140,17 @@ async def test_confirm_registration_already_active(simple_client: httpx.AsyncCli
         'email': 'user@mail.ru',
         'password': 'test-password'
     }
-    mock_send_mail = mocker.patch('service.user_service.send_mail.delay')
+    mock_send_mail = mocker.patch('application.service.user.send_mail.delay')
     await simple_client.post(urls['profile']['registration_request'], json=data)
     registered = await user_repo.get_user_by_email(data['email'])
     registered.is_active = True
-    await user_repo._repo.force_commit()
+    await user_repo.session.commit()
     args, kwargs = mock_send_mail.call_args
     url = args[1]
     token = url.split('/')[-1]
     response = await simple_client.get(urls['profile']['registration_confirm'].format(token=token))
     assert response.status_code == 400
-    assert response.json() == {'detail': {
-        'msgs': ['Your account is already activated'], 'service': 'UserAuthService'}}
+    assert response.json() == {'detail': 'Your account is already activated'}
 
 
 """test change password routs"""
@@ -163,7 +158,7 @@ async def test_confirm_registration_already_active(simple_client: httpx.AsyncCli
 
 @pytest_mark_asyncio
 async def test_change_password_request(simple_client: httpx.AsyncClient, user_repo: UserRepository,  mocker):
-    mock_send_mail = mocker.patch('service.user_service.send_mail.delay')
+    mock_send_mail = mocker.patch('application.service.user.send_mail.delay')
     response = await simple_client.get(urls['profile']['change_password_request'])
     assert response.status_code == 200
     assert response.json() == {
@@ -177,7 +172,7 @@ async def test_change_password_confirm(simple_client: httpx.AsyncClient, simple_
         'current_password': 'test_password',
         'new_password': 'new'
     }
-    mock_send_mail = mocker.patch('service.user_service.send_mail.delay')
+    mock_send_mail = mocker.patch('application.service.user.send_mail.delay')
     await simple_client.get(urls['profile']['change_password_request'])
     args, kwargs = mock_send_mail.call_args
     url = args[1]
@@ -194,15 +189,14 @@ async def test_change_password_confirm_invalid_token(simple_client: httpx.AsyncC
         'current_password': 'test_password',
         'new_password': 'new'
     }
-    mock_send_mail = mocker.patch('service.user_service.send_mail.delay')
+    mock_send_mail = mocker.patch('application.service.user.send_mail.delay')
     await simple_client.get(urls['profile']['change_password_request'])
     args, kwargs = mock_send_mail.call_args
     url = args[1]
     token = url.split('/')[-1][:-1]
     response = await simple_client.post(urls['profile']['change_password_confirm'].format(token=token), json=data)
     assert response.status_code == 400
-    assert response.json() == {'detail': {
-        'msgs': ['Wrong url or expired'], 'service': 'UserAuthService'}}
+    assert response.json() == {'detail': 'Wrong url or expired'}
     assert not check_password('new', simple_user.password)
 
 
@@ -212,7 +206,7 @@ async def test_change_password_confirm_token_expired(simple_client: httpx.AsyncC
         'current_password': 'test_password',
         'new_password': 'new'
     }
-    mock_send_mail = mocker.patch('service.user_service.send_mail.delay')
+    mock_send_mail = mocker.patch('application.service.user.send_mail.delay')
     await simple_client.get(urls['profile']['change_password_request'])
     args, kwargs = mock_send_mail.call_args
     url = args[1]
@@ -220,8 +214,7 @@ async def test_change_password_confirm_token_expired(simple_client: httpx.AsyncC
     with freeze_time(datetime.now()+timedelta(seconds=config.URL_EXPIRE_TIME+3)):
         response = await simple_client.post(urls['profile']['change_password_confirm'].format(token=token), json=data)
         assert response.status_code == 400
-        assert response.json() == {'detail': {
-            'msgs': ['Wrong url or expired'], 'service': 'UserAuthService'}}
+        assert response.json() == {'detail': 'Wrong url or expired'}
         assert not check_password('new', simple_user.password)
 
 
@@ -231,15 +224,14 @@ async def test_change_password_confirm_wrong_password(simple_client: httpx.Async
         'current_password': 'test_passwor',
         'new_password': 'new'
     }
-    mock_send_mail = mocker.patch('service.user_service.send_mail.delay')
+    mock_send_mail = mocker.patch('application.service.user.send_mail.delay')
     await simple_client.get(urls['profile']['change_password_request'])
     args, kwargs = mock_send_mail.call_args
     url = args[1]
     token = url.split('/')[-1]
     response = await simple_client.post(urls['profile']['change_password_confirm'].format(token=token), json=data)
     assert response.status_code == 400
-    assert response.json() == {'detail': {
-        'msgs': ['Wrong password'], 'service': 'UserAuthService'}}
+    assert response.json() == {'detail': 'Wrong password'}
     assert not check_password('new', simple_user.password)
 
 
@@ -266,8 +258,7 @@ async def test_login_fail_pas(client: httpx.AsyncClient, simple_user: User):
     }
     response = await client.post(urls['profile']['login'], json=data)
     assert response.status_code == 400
-    assert response.json() == {'detail': {
-        'service': 'UserAuthService', 'msgs': ['Wrong password']}}
+    assert response.json() == {'detail': 'Wrong password'}
 
 
 @pytest_mark_asyncio
@@ -278,8 +269,8 @@ async def test_login_fail_email(client: httpx.AsyncClient):
     }
     response = await client.post(urls['profile']['login'], json=data)
     assert response.status_code == 400
-    assert response.json() == {'detail': {'service': 'UserAuthService', 'msgs': [
-        f'Unable to find user with email ({data["email"]})']}}
+    assert response.json() == {
+        'detail': f'Unable to find user with email {data["email"]}'}
 
 
 """test logout"""
@@ -300,5 +291,4 @@ async def test_logout(simple_client: httpx.AsyncClient):
 async def test_logout_fail(client: httpx.AsyncClient):
     response = await client.post(urls['profile']['logout'])
     assert response.status_code == 401
-    assert response.json() == {'detail': {'service': 'UserAuthService',
-                                          'internal exception class': 'TokenError', 'msgs': ['token was not provide']}}
+    assert response.json() == {'detail': 'token was not provide'}

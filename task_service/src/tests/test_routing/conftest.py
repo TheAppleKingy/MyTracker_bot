@@ -7,8 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from infra.db.session import get_db_session
 from app import app
 from infra.security.token.factory import TokenHandlerFactory
-from infra.db.models.users import User
-from api.dependencies import get_user_auth_service
+from domain.entities.users import User
 
 
 @pytest_asyncio.fixture
