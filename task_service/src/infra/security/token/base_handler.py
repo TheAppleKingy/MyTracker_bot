@@ -1,9 +1,9 @@
 import config
 
 from typing import Sequence
-from .abstract import AbstractTokenHandler
 
-from infra.db.models.users import User
+from domain.entities.users import User
+from .abstract import AbstractTokenHandler
 from .exceptions import TokenError
 
 
@@ -20,7 +20,8 @@ class TokenHandler(AbstractTokenHandler):
         decoded = self.decode(token)
         if fields_required:
             if not all([key in decoded.keys() for key in fields_required]):
-                raise TokenError('provided token do not contain required info')
+                raise TokenError(
+                    'provided token does not contain required info')
         return decoded
 
     def get_token_for_user(self, user: User):

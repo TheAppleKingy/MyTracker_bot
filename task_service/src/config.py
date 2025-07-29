@@ -13,6 +13,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 TOKEN_EXPIRE_TIME = int(os.getenv('TOKEN_EXPIRE_TIME'))
 URL_EXPIRE_TIME = int(os.getenv('URL_EXPIRE_TIME'))
 TOKEN_SALT = os.getenv('TOKEN_SALT')
+QUEUE = os.getenv("TASK_SERVICE_QUEUE")
 EMAIL_HOST = 'smtp.yandex.ru'
 EMAIL_PORT = 465
 EMAIL_USE_SSL = True

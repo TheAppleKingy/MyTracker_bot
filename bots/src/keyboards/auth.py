@@ -1,7 +1,5 @@
-from aiogram import types, Router, F
-from aiogram.fsm.context import FSMContext
+from aiogram import types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.filters.command import Command
 
 
 def login_button():

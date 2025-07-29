@@ -29,4 +29,4 @@ async def task_info(cq: types.CallbackQuery, state: FSMContext):
     response = await client.get_my_task(task_id)
     task = TaskViewSchema(**response.json)
     user_tz = await get_user_tz(cq.from_user.username)
-    await cq.message.answer(task.show_to_message(user_tz), reply_markup=for_task_info_kb(task))
+    await cq.message.answer(task.show_to_message(user_tz), reply_markup=for_task_info_kb(task), parse_mode='HTML')

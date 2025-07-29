@@ -6,29 +6,20 @@ from datetime import datetime, timedelta
 
 from freezegun import freeze_time
 
-from infra.db.models.tasks import Task
-from infra.db.models.users import User, Group
+from domain.entities.tasks import Task
+from domain.entities.users import User
 from infra.db.repository.user_repo import UserRepository
-from infra.db.repository.exceptions import UserRepositoryError
+from domain.repositories.exceptions import UserRepositoryError
 from infra.security.token.factory import TokenHandlerFactory as handler_factory
 from infra.security.token.serializer_handler import SerializerTokenHandler
-from infra.security.permissions.permissions import IsActivePermission, GroupPermission
+from infra.security.permissions.permissions import IsActivePermission
 from infra.security.password_utils import hash_password
-from service.user_service import UserAuthService, UserPermissionService, UserService
-from service.exceptions import UserAuthServiceError, UserPermissionServiceError
-from api.schemas.users_schemas import LoginSchema, UserCreateSchema, ChangePasswordSchema
+from application.service.user import UserAuthService, UserPermissionService, UserAuthDataService
+from application.service.exceptions import UserAuthServiceError, UserPermissionServiceError, UserAuthDataServiceError
+from application.dto.users_dto import Login, UserCreate, ChangePassword
 
 
 pytest_mark_asyncio = pytest.mark.asyncio
-
-
-@pytest_mark_asyncio
-async def test_get_user_tasks_success(user_service: UserService, mock_user_repo: UserRepository):
-    tasks = [Task(id=1), Task(id=2)]
-    mock_user_repo.get_user_and_tasks.return_value = User(id=1, tasks=tasks)
-    result = await user_service.get_user_tasks(1)
-    assert result == tasks
-    mock_user_repo.get_user_and_tasks.assert_awaited_once_with(1)
 
 
 """Test auth_user"""
@@ -71,7 +62,7 @@ async def test_auth_user_token_is_none(auth_service: UserAuthService):
 async def test_auth_user_token_does_not_contain_fields(auth_service: UserAuthService):
     jwt_handler = handler_factory.get_jwt_handler()
     token = jwt_handler.encode({'other': 33})
-    with pytest.raises(UserAuthServiceError, match='provided token do not contain required info'):
+    with pytest.raises(UserAuthServiceError, match='provided token does not contain required info'):
         await auth_service.auth_user(token)
 
 
@@ -88,44 +79,44 @@ async def test_auth_user_fail_invalid_id(auth_service: UserAuthService, mock_use
 
 
 @pytest_mark_asyncio
-async def test_login_user_success(auth_service: UserAuthService, mock_user_repo: UserRepository, mocker):
+async def test_login_user_success(auth_data_service: UserAuthDataService, mock_user_repo: UserRepository, mocker):
     user = User(email="test@example.com", password="hashed")
     mock_user_repo.get_user_by_email.return_value = user
-    schema = LoginSchema(email=user.email, password=user.password)
-    mocker.patch("service.user_service.check_password", return_value=True)
-    result = await auth_service.login_user(schema)
+    schema = Login(email=user.email, password=user.password)
+    mocker.patch("application.service.user.check_password", return_value=True)
+    result = await auth_data_service.login_user(schema)
     assert result == user
 
 
 @pytest_mark_asyncio
-async def test_login_user_wrong_password(auth_service: UserAuthService, mock_user_repo: UserRepository, mocker):
+async def test_login_user_wrong_password(auth_data_service: UserAuthDataService, mock_user_repo: UserRepository, mocker):
     user = User(email="test@example.com", password="hashed")
     mock_user_repo.get_user_by_email.return_value = user
-    mocker.patch("service.user_service.check_password", return_value=False)
-    schema = LoginSchema(email=user.email, password=user.password)
-    with pytest.raises(UserAuthServiceError, match="Wrong password"):
-        await auth_service.login_user(schema)
+    mocker.patch("application.service.user.check_password", return_value=False)
+    schema = Login(email=user.email, password=user.password)
+    with pytest.raises(UserAuthDataServiceError, match="Wrong password"):
+        await auth_data_service.login_user(schema)
 
 
 @pytest_mark_asyncio
-async def test_login_user_not_found(auth_service: UserAuthService, mock_user_repo: UserRepository):
+async def test_login_user_not_found(auth_data_service: UserAuthDataService, mock_user_repo: UserRepository):
     mock_user_repo.get_user_by_email.return_value = None
-    schema = LoginSchema(email='te', password='tp')
-    with pytest.raises(UserAuthServiceError, match="Unable to find user"):
-        await auth_service.login_user(schema)
+    schema = Login(email='te', password='tp')
+    with pytest.raises(UserAuthDataServiceError, match="Unable to find user"):
+        await auth_data_service.login_user(schema)
 
 
 """test registration"""
 
 
 @pytest_mark_asyncio
-async def test_register_request_success(auth_service: UserAuthService, mock_user_repo: UserRepository, mocker):
-    mock_send_mail = mocker.patch('service.user_service.send_mail.delay')
+async def test_register_request_success(auth_data_service: UserAuthDataService, mock_user_repo: UserRepository, mocker):
+    mock_send_mail = mocker.patch('application.service.user.send_mail.delay')
     user = User(id=1, email="test@test.com")
     mock_user_repo.create_user.return_value = user
-    schema = UserCreateSchema(
+    schema = UserCreate(
         tg_name='testtg', email='test@test.com', password='test_pass')
-    await auth_service.registration_request(schema)
+    await auth_data_service.registration_request(schema)
     mock_user_repo.create_user.assert_awaited_once()
     mock_send_mail.assert_called_once()
     args, kwargs = mock_send_mail.call_args
@@ -133,151 +124,151 @@ async def test_register_request_success(auth_service: UserAuthService, mock_user
 
 
 @pytest_mark_asyncio
-async def test_register_user_fail_duplicate(auth_service: UserAuthService, mock_user_repo: UserRepository, mocker):
-    mock_send_mail = mocker.patch('service.user_service.send_mail.delay')
+async def test_register_user_fail_duplicate(auth_data_service: UserAuthDataService, mock_user_repo: UserRepository, mocker):
+    mock_send_mail = mocker.patch('application.service.user.send_mail.delay')
     mock_user_repo.create_user.side_effect = UserRepositoryError(
         'already exists')
-    mocker.patch("infra.exc.parse_integrity_err_msg",
-                 return_value="email")
-    schema = UserCreateSchema(
+    mocker.patch("domain.repositories.exceptions.parse_integrity_err_message",
+                 return_value=("email", "dw"))
+    schema = UserCreate(
         tg_name='testtg', email='lala@mail.ru', password='test_pass')
-    with pytest.raises(UserRepositoryError, match="already exists"):
-        await auth_service.registration_request(schema)
+    with pytest.raises(UserAuthDataServiceError, match="already exists"):
+        await auth_data_service.registration_request(schema)
         mock_send_mail.assert_not_called()
 
 
 @pytest_mark_asyncio
-async def test_confirm_registration(auth_service: UserAuthService, mock_user_repo: UserRepository):
+async def test_confirm_registration(auth_data_service: UserAuthDataService, mock_user_repo: UserRepository):
     user = User(id=1)
     token_handler = handler_factory.get_serializer_token_handler()
     url_token = token_handler.encode({'user_id': user.id})
     mock_user_repo.get_user.return_value = user
-    await auth_service.confirm_registration(url_token)
+    await auth_data_service.confirm_registration(url_token)
 
 
 @pytest_mark_asyncio
-async def test_confirm_registration_wrong_url_token(auth_service: UserAuthService):
+async def test_confirm_registration_wrong_url_token(auth_data_service: UserAuthDataService):
     user = User(id=1)
     token_handler = handler_factory.get_serializer_token_handler()
     url_token = token_handler.encode({'user_id': user.id})[:-1]
-    with pytest.raises(UserAuthServiceError):
-        await auth_service.confirm_registration(url_token)
+    with pytest.raises(UserAuthDataServiceError):
+        await auth_data_service.confirm_registration(url_token)
 
 
 @pytest_mark_asyncio
-async def test_confirm_registration_token_is_none(auth_service: UserAuthService):
-    with pytest.raises(UserAuthServiceError):
-        await auth_service.confirm_registration(None)
+async def test_confirm_registration_token_is_none(auth_data_service: UserAuthDataService):
+    with pytest.raises(UserAuthDataServiceError):
+        await auth_data_service.confirm_registration(None)
 
 
 @pytest_mark_asyncio
-async def test_confirm_registration_token_expired(auth_service: UserAuthService):
+async def test_confirm_registration_token_expired(auth_data_service: UserAuthDataService):
     user = User(id=1)
     token_handler = handler_factory.get_serializer_token_handler()
     url_token = token_handler.encode({'user_id': user.id})
     with freeze_time(datetime.now()+timedelta(seconds=config.URL_EXPIRE_TIME+3)):
-        with pytest.raises(UserAuthServiceError):
-            await auth_service.confirm_registration(url_token)
+        with pytest.raises(UserAuthDataServiceError):
+            await auth_data_service.confirm_registration(url_token)
 
 
 @pytest_mark_asyncio
-async def test_confirm_registration_user_is_none(auth_service: UserAuthService, mock_user_repo: UserRepository, mock_serializer_handler: SerializerTokenHandler, mocker):
+async def test_confirm_registration_user_is_none(auth_data_service: UserAuthDataService, mock_user_repo: UserRepository, mock_serializer_handler: SerializerTokenHandler, mocker):
     mock_serializer_handler.validate_token.return_value = {'user_id': 1}
-    mocker.patch('service.user_service.handler_factory.get_serializer_token_handler',
+    mocker.patch('application.service.user.handler_factory.get_serializer_token_handler',
                  return_value=mock_serializer_handler)
     mock_user_repo.get_user.return_value = None
-    with pytest.raises(UserAuthServiceError, match='Wrong url or expired'):
-        await auth_service.confirm_registration('token')
+    with pytest.raises(UserAuthDataServiceError, match='Wrong url or expired'):
+        await auth_data_service.confirm_registration('token')
 
 
 @pytest_mark_asyncio
-async def test_confirm_registration_user_already_active(auth_service: UserAuthService, mock_user_repo: UserRepository, mock_serializer_handler: SerializerTokenHandler):
+async def test_confirm_registration_user_already_active(auth_data_service: UserAuthDataService, mock_user_repo: UserRepository, mock_serializer_handler: SerializerTokenHandler):
     user = User(id=1, is_active=True)
     token_handler = handler_factory.get_serializer_token_handler()
     url_token = token_handler.encode({'user_id': user.id})
     mock_user_repo.get_user.return_value = user
-    with pytest.raises(UserAuthServiceError, match='Your account is already activated'):
-        await auth_service.confirm_registration(url_token)
+    with pytest.raises(UserAuthDataServiceError, match='Your account is already activated'):
+        await auth_data_service.confirm_registration(url_token)
 
 
 """test change password"""
 
 
 @pytest_mark_asyncio
-async def test_change_password_request(auth_service: UserAuthService, mock_user_repo: UserRepository, mocker):
-    mock_send_mail = mocker.patch('service.user_service.send_mail.delay')
+async def test_change_password_request(auth_data_service: UserAuthDataService, mock_user_repo: UserRepository, mocker):
+    mock_send_mail = mocker.patch('application.service.user.send_mail.delay')
     user = User(id=1, email='email')
     mock_user_repo.get_user.return_value = user
-    await auth_service.change_password_request(user.id)
+    await auth_data_service.change_password_request(user.id)
     mock_send_mail.assert_called_once()
     args, kwargs = mock_send_mail.call_args
     assert user.email in args
 
 
 @pytest_mark_asyncio
-async def test_change_password_request_user_is_none(auth_service: UserAuthService, mock_user_repo: UserRepository, mocker):
-    mock_send_mail = mocker.patch('service.user_service.send_mail.delay')
+async def test_change_password_request_user_is_none(auth_data_service: UserAuthDataService, mock_user_repo: UserRepository, mocker):
+    mock_send_mail = mocker.patch('application.service.user.send_mail.delay')
     mock_user_repo.get_user.return_value = None
     with pytest.raises(AttributeError):
-        await auth_service.change_password_request(0)
+        await auth_data_service.change_password_request(0)
     mock_send_mail.assert_not_called()
 
 
 @pytest_mark_asyncio
-async def test_confirm_change_password(auth_service: UserAuthService, mock_user_repo: UserRepository):
+async def test_confirm_change_password(auth_data_service: UserAuthDataService, mock_user_repo: UserRepository):
     user = User(id=1)
     user.password = hash_password('test')
     token_handler = handler_factory.get_serializer_token_handler()
     url_token = token_handler.encode({'user_id': user.id})
     mock_user_repo.get_user.return_value = user
-    schema = ChangePasswordSchema(
+    schema = ChangePassword(
         current_password='test', new_password='test1')
-    await auth_service.confirm_change_password(url_token, schema)
+    await auth_data_service.confirm_change_password(url_token, schema)
     mock_user_repo.update_user.assert_awaited_once()
 
 
 @pytest_mark_asyncio
-async def test_confirm_change_password_wrong_url_token(auth_service: UserAuthService, mock_user_repo: UserRepository):
+async def test_confirm_change_password_wrong_url_token(auth_data_service: UserAuthDataService, mock_user_repo: UserRepository):
     user = User(id=1)
     token_handler = handler_factory.get_serializer_token_handler()
     token = token_handler.encode({'user_id': user.id})[:-1]
-    schema = ChangePasswordSchema(current_password='old', new_password='new')
-    with pytest.raises(UserAuthServiceError):
-        await auth_service.confirm_change_password(token, schema)
+    schema = ChangePassword(current_password='old', new_password='new')
+    with pytest.raises(UserAuthDataServiceError):
+        await auth_data_service.confirm_change_password(token, schema)
 
 
 @pytest_mark_asyncio
-async def test_confirm_change_password_token_expired(auth_service: UserAuthService, mock_user_repo: UserRepository):
+async def test_confirm_change_password_token_expired(auth_data_service: UserAuthDataService, mock_user_repo: UserRepository):
     user = User(id=1)
     token_handler = handler_factory.get_serializer_token_handler()
     token = token_handler.encode({'user_id': user.id})
-    schema = ChangePasswordSchema(current_password='old', new_password='new')
+    schema = ChangePassword(current_password='old', new_password='new')
     with freeze_time(datetime.now()+timedelta(seconds=config.URL_EXPIRE_TIME+3)):
-        with pytest.raises(UserAuthServiceError):
-            await auth_service.confirm_change_password(token, schema)
+        with pytest.raises(UserAuthDataServiceError):
+            await auth_data_service.confirm_change_password(token, schema)
 
 
 @pytest_mark_asyncio
-async def test_confirm_change_password_user_is_none(auth_service: UserAuthService, mock_user_repo: UserRepository, mock_serializer_handler: SerializerTokenHandler, mocker):
+async def test_confirm_change_password_user_is_none(auth_data_service: UserAuthDataService, mock_user_repo: UserRepository, mock_serializer_handler: SerializerTokenHandler, mocker):
     mock_serializer_handler.validate_token.return_value = {'user_id': 1}
-    mocker.patch('service.user_service.handler_factory.get_serializer_token_handler',
+    mocker.patch('application.service.user.handler_factory.get_serializer_token_handler',
                  return_value=mock_serializer_handler)
     mock_user_repo.get_user.return_value = None
-    schema = ChangePasswordSchema(current_password='old', new_password='new')
-    with pytest.raises(UserAuthServiceError, match='Wrong url or expired'):
-        await auth_service.confirm_change_password('token', schema)
+    schema = ChangePassword(current_password='old', new_password='new')
+    with pytest.raises(UserAuthDataServiceError, match='Wrong url or expired'):
+        await auth_data_service.confirm_change_password('token', schema)
 
 
 @pytest_mark_asyncio
-async def test_confirm_change_password_wrong_password(auth_service: UserAuthService, mock_user_repo: UserRepository, mock_serializer_handler: SerializerTokenHandler, mocker):
+async def test_confirm_change_password_wrong_password(auth_data_service: UserAuthDataService, mock_user_repo: UserRepository, mock_serializer_handler: SerializerTokenHandler, mocker):
     mock_serializer_handler.validate_token.return_value = {'user_id': 1}
-    mocker.patch('service.user_service.handler_factory.get_serializer_token_handler',
+    mocker.patch('application.service.user.handler_factory.get_serializer_token_handler',
                  return_value=mock_serializer_handler)
     mock_user_repo.get_user.return_value = User(password='test')
-    mocker.patch('service.user_service.check_password', return_value=False)
-    schema = ChangePasswordSchema(current_password='old', new_password='new')
-    with pytest.raises(UserAuthServiceError, match='Wrong password'):
-        await auth_service.confirm_change_password('token', schema)
+    mocker.patch('application.service.user.check_password', return_value=False)
+    schema = ChangePassword(current_password='old', new_password='new')
+    with pytest.raises(UserAuthDataServiceError, match='Wrong password'):
+        await auth_data_service.confirm_change_password('token', schema)
     mock_user_repo.update_user.assert_not_awaited()
 
 
@@ -286,9 +277,9 @@ async def test_confirm_change_password_wrong_password(auth_service: UserAuthServ
 
 @pytest_mark_asyncio
 async def test_check(permission_service: UserPermissionService, mock_user_repo: UserRepository):
-    user = User(id=1, groups=[Group(title='admin')], is_active=True)
+    user = User(id=1, is_active=True)
     permission_service.perm_objs = [
-        IsActivePermission(), GroupPermission(['admin'])]
+        IsActivePermission()]
     user = permission_service.check(user)
     assert user == user
 

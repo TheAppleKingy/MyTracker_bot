@@ -1,12 +1,12 @@
-import config
-
 from aiogram import Router, F, types
 from aiogram.fsm.context import FSMContext
-from redis.asyncio import from_url
 
 from states.auth_states import LoginStates
+
 from api.client import BackendClient
-from api.exc import BackendError
+from api.redis_client import get_user_tz
+
+from keyboards.settings import settings_kb
 from keyboards.tasks import get_my_tasks_kb
 
 
@@ -36,4 +36,5 @@ async def login(message: types.Message, state: FSMContext):
     await client.login(email, password)
     await message.delete()
     await state.clear()
-    await message.answer('You are logged in', reply_markup=get_my_tasks_kb())
+    await get_user_tz(message.from_user.username)
+    await message.answer('You are logged in!', reply_markup=get_my_tasks_kb())
