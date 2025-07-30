@@ -12,9 +12,6 @@ services:
       sh -c "python main.py"
     volumes:
       - ./src:/app/src
-    networks:
-      - MyTrackerNetwork
-      - bot_network
 
   bot_redis:
     image: redis:7.0.5-alpine
@@ -24,8 +21,6 @@ services:
       - .env
     volumes:
       - bot_redis_data:/data
-    networks:
-      - bot_network
 
   bot_worker:
     build:  
@@ -39,15 +34,6 @@ services:
       - PYTHONPATH=/app/src
     depends_on:
       - bot_redis
-    networks:
-      - MyTrackerNetwork
-      - bot_network
 
 volumes:
   bot_redis_data:
-
-
-networks:
-  MyTrackerNetwork:
-    external: true
-  bot_network:
