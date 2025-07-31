@@ -1,52 +1,28 @@
-# MyTracker - это личный таск-трекер с управлением через телеграм-бота.
+# MyTracker - is a personal task controlling by telegram bot. This repository contain code for bot app.
 
-Для запуска серверной части приложения на локальной машине:
-```commandline
-docker-compose up --build
-```
-После поднятия контейнера не забудьте применить миграции к бд:
-```commandline
-docker-compose exec app alembic upgrade head
-```
+- [Quickstart](#quickstart)
+- [Usage](#usage)
+- [Peculiarities](#peculiarities)
+- [Stack](#stack)
 
+---
+## Quickstart
+To start container enc must contain next variables:
+* CELERY_WORKERS
+* CELERY_BROKER_URL
+* REDIS_PASSWORD
+* REDIS_URL
+* BOT_TOKEN
+* BOT_QUEUE
+* TIMEZONE_DB_API_KEY
+* BASE_API_URL
 
-* Технологии:
-* * бэкенд - **FastaAPI**
-* * бот - **aiogram**
-* * локальный веб-сервер - **uvicorn**
-* * бд - **PostrgreSQL**
-* * работа с бд - **SQLAlchemy и asyncpg**
-* * тестироывние - **pytest**
-* * кеш, брокер задач - **Redis**
-* * очереди задач - **Celery**
+Bot uses this [api](https://timezonedb.com/) for providing easy way to customize user time zone. Follow the link? register and get API token that will be send as TIMEZONE_DB_API_KEY value.
 
-------------------------------------------------------------------------------------------------------------
-*Создать alembic.ini*
-```commandline
-alembic init -t async migration
+When env setup and backend(repository [MyTracker_api](https://github.com/TheAppleKingy/MyTracker_api)) was runned you can build and run containers by executing
 ```
-
-*Создать миграцию*
+docker compose up --build
 ```
-alembic revision --autogenerate -m "migration message"
-```
-
-*Применить миграции до последней*
-```
-alembic upgrade head
-```
-
-*Применить мигарции до определенной*
-```
-alembic upgrade migration_id
-```
-
-*Откатить на n миграций*
-```
-alembic downgrade -n
-```
-
-*Откат до определенной миграции*
-```
-alembic downgrade migration_id
-```
+---
+## Usage
+This bot provid
