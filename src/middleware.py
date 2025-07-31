@@ -22,6 +22,9 @@ class BackendResponseMiddleware(BaseMiddleware):
             answer = event.message.answer if isinstance(
                 event, CallbackQuery) else event.answer
             if isinstance(e, BackendError):
+                print('backend err')
+                if 'Task does not exist' in str(e):
+                    await answer("Task was deleted")
                 if 'Unable to find user with email' in str(e):
                     await answer(
                         f"No user with email {str(e).split()[-1]}. Try again", reply_markup=login_kb())
@@ -41,6 +44,8 @@ class BackendResponseMiddleware(BaseMiddleware):
 
 
 class RollbackDetectorMiddleware(BaseMiddleware):
+    """this middleware detected messages that bot sending what could be rollback"""
+
     async def __call__(
         self,
         handler: Callable[[Any, Dict[str, Any]], Awaitable[Any]],

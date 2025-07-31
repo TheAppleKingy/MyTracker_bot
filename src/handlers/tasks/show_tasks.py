@@ -15,7 +15,6 @@ show_task_router = Router(name='Show tasks')
 async def my_tasks(cq: types.CallbackQuery, state: FSMContext):
     await cq.answer()
     await rollback(cq, state)
-    await state.clear()
     client = BackendClient(cq.from_user.username)
     response = await client.get_my_tasks()
     if response.json == []:

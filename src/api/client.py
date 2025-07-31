@@ -71,4 +71,8 @@ class BackendClient:
 
     async def finish_task(self, task_id: int):
         web = await self._web_client()
-        return BackendResponse(await web.delete(f'bot/finish_task/{task_id}'))
+        return BackendResponse(await web.patch(f'bot/finish_task/{task_id}'))
+
+    async def delete_task(self, task_id: int):
+        web = await self._web_client()
+        return BackendResponse(await web.delete(f'bot/delete_task/{task_id}'))

@@ -3,11 +3,13 @@ from aiogram.fsm.context import FSMContext
 
 
 async def rollback(trigger: types.CallbackQuery | types.Message, state: FSMContext):
+    """this function let to stop handlers chain representing a user script"""
     data = await state.get_data()
     rollback_msg: int = data.pop('rollback_msg', None)
     if rollback_msg:
+        await state.clear()
         resp = trigger.message if isinstance(
-            resp, types.CallbackQuery) else trigger
+            trigger, types.CallbackQuery) else trigger
         await resp.bot.edit_message_text(
             'Operation aborted',
             reply_markup=None,

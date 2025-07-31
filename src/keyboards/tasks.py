@@ -23,6 +23,10 @@ def create_task_button():
         text="Create task", callback_data='create_task')
 
 
+def delete_task_button(task_id: int):
+    return types.InlineKeyboardButton(text="Delete", callback_data=f'delete_task_{task_id}')
+
+
 def update_task_button(task_id: int):
     return types.InlineKeyboardButton(
         text="Update", callback_data=f'update_task_{task_id}')
@@ -80,8 +84,11 @@ def tasks_kb(tasks: list[TaskViewSchema], additional_buttons: list[types.InlineK
     builder = task_buttons_builder(tasks)
     for add in additional_buttons:
         builder.add(add)
-    sizes = [len(additional_buttons)] if not tasks else [
-        *[1]*len(tasks), len(additional_buttons)]
+    additional_size = [2]*(len(additional_buttons)//2)
+    if len(additional_buttons) % 2:
+        additional_size.append(1)
+    sizes = [*additional_size] if not tasks else [
+        *[1]*len(tasks), *additional_size]
     builder.adjust(*sizes)
     return builder.as_markup()
 
@@ -97,6 +104,7 @@ def for_task_info_kb(task: TaskViewSchema):
             task.id), update_task_button(task.id), add_reminder_button(task.id)]
     if task.task_id:
         buttons.append(back_button(task.task_id))
+    buttons.append(delete_task_button(task.id))
     buttons.append(my_tasks_button())
     return tasks_kb(task.subtasks, buttons)
 

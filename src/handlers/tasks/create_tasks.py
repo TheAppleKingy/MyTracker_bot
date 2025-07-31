@@ -33,7 +33,9 @@ async def ask_description(message: types.Message, state: FSMContext):
 async def check_tz(message: types.Message, state: FSMContext):
     await state.update_data({'description': message.text})
     await state.set_state(CreateTaskStates.waiting_deadline)
-    return await message.answer('Choose deadline date', reply_markup=await kalendar_kb())
+    user_tz = await get_user_tz(message.from_user.username)
+    current_datetime_local = datetime.now(timezone.utc).astimezone(user_tz)
+    return await message.answer('Choose deadline date', reply_markup=await kalendar_kb(current_datetime_local.year, current_datetime_local.month))
 
 
 @create_task_router.callback_query(simple_cal_callback.filter(), CreateTaskStates.waiting_deadline)

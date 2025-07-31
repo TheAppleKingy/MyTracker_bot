@@ -16,6 +16,7 @@ from handlers.tasks.update_task import update_task_router
 from handlers.tasks.task_reminder import reminder_router
 from handlers.settings.cmd_settings import settings_router
 from handlers.settings.set_tz import tz_router
+from handlers.tasks.delete_task import delete_task_router
 
 from api.redis_client import redis
 
@@ -41,7 +42,8 @@ async def start():
         update_task_router,
         reminder_router,
         settings_router,
-        tz_router
+        tz_router,
+        delete_task_router
     )
     await dispatcher.start_polling(bot)
 

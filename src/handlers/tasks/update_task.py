@@ -4,7 +4,7 @@ from aiogram import types, F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram3_calendar import SimpleCalendar as calendar, simple_cal_callback
 
-from keyboards.tasks import for_task_update_kb, for_task_info_kb, back_kb, kalendar_kb, deadline_time_kb
+from keyboards.tasks import for_task_update_kb, for_task_info_kb, kalendar_kb, deadline_time_kb, yes_or_no_kb
 from api.client import BackendClient
 from api.schemas import TaskViewSchema
 from api.redis_client import get_user_tz
@@ -29,9 +29,11 @@ async def ask_enter_value(cq: types.CallbackQuery, state: FSMContext):
     await cq.message.edit_reply_markup(reply_markup=None)
     updating_field = cq.data.split('_')[-1]
     expected_state = UpdateTaskStates.resolve_state(updating_field)
+    user_tz = await get_user_tz(cq.from_user.username)
+    current_datetime_local = datetime.now(timezone.utc).astimezone(user_tz)
     if updating_field == 'deadline':
         await state.set_state(UpdateTaskStates.waiting_deadline)
-        return await cq.message.answer("Choose new deadline day", reply_markup=await kalendar_kb())
+        return await cq.message.answer("Choose new deadline day", reply_markup=await kalendar_kb(current_datetime_local.year, current_datetime_local.month))
     msg = f"Enter new {updating_field}"
     await state.set_state(expected_state)
     return await cq.message.answer(msg)
@@ -100,5 +102,5 @@ async def mark_task_as_done(cq: types.CallbackQuery, state: FSMContext):
     task_id = int(cq.data.split('_')[-1])
     client = BackendClient(cq.from_user.username)
     await client.finish_task(task_id)
-    await cq.message.answer("Task done!", reply_markup=back_kb(task_id))
+    await cq.message.answer("Task done! Do you want to delete task from list?", reply_markup=yes_or_no_kb(f'delete_task_{task_id}', f'get_task_{task_id}'))
     await state.clear()

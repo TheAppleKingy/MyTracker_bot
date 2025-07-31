@@ -26,7 +26,9 @@ async def add_reminder(cq: types.CallbackQuery, state: FSMContext):
     response.json.pop('subtasks')
     task = TaskViewSchema(**response.json)
     await state.update_data(task=task.model_dump_json())
-    return await cq.message.answer("Choose remind date", reply_markup=await kalendar_kb())
+    user_tz = await get_user_tz(cq.from_user.username)
+    current_datetime_local = datetime.now(timezone.utc).astimezone(user_tz)
+    return await cq.message.answer("Choose remind date", reply_markup=await kalendar_kb(current_datetime_local.year, current_datetime_local.month))
 
 
 @reminder_router.callback_query(simple_cal_callback.filter())
