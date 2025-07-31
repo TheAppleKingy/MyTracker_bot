@@ -7,7 +7,7 @@
 
 ---
 ## Quickstart
-To start container enc must contain next variables:
+To start container env must contain next variables:
 * CELERY_WORKERS
 * CELERY_BROKER_URL
 * REDIS_PASSWORD
