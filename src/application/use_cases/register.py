@@ -1,0 +1,12 @@
+from src.application.interfaces.api_client import BackendClientInterface
+
+
+class RegisterUseCase:
+    def __init__(
+        self,
+        backend: BackendClientInterface
+    ):
+        self._backend = backend
+
+    async def execute(self, tg_name: str):
+        return await self._backend.register(tg_name)

@@ -6,7 +6,7 @@ authors = [
     {name = "TheAppleKingy",email = "pridanov.ali.job@gmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.13,<4.0"
 dependencies = [
     "aiogram (>=3.21.0,<4.0.0)",
     "pytest (>=8.4.1,<9.0.0)",
