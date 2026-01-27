@@ -9,7 +9,7 @@ from celery_app import celery
 bot = Bot(config.TOKEN)
 
 
-@celery.task(queue=config.QUEUE)
+@celery.task
 def notify(task_title: str, remained_time: str, chat_id: int):
     async_to_sync(bot.send_message)(
         chat_id, f'Task "{task_title}..." is waiting! Deadline over ' + remained_time)

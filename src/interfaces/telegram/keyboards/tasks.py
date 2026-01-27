@@ -5,74 +5,73 @@ from aiogram import types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram3_calendar import SimpleCalendar
 
-from api.schemas import TaskViewSchema
+from src.domain.entities import Task
 
 
-def my_tasks_button():
-    return types.InlineKeyboardButton(
-        text="My tasks", callback_data='get_task_all')
+def _my_tasks_button():
+    return types.InlineKeyboardButton(text="My tasks", callback_data='get_task_all')
 
 
-def add_subtask_button(for_task_id: int):
+def _add_subtask_button(for_task_id: int):
     return types.InlineKeyboardButton(
         text="Add subtask", callback_data=f'create_subtask_{for_task_id}')
 
 
-def create_task_button():
+def _create_task_button():
     return types.InlineKeyboardButton(
         text="Create task", callback_data='create_task')
 
 
-def delete_task_button(task_id: int):
+def _delete_task_button(task_id: int):
     return types.InlineKeyboardButton(text="Delete", callback_data=f'delete_task_{task_id}')
 
 
-def update_task_button(task_id: int):
+def _update_task_button(task_id: int):
     return types.InlineKeyboardButton(
         text="Update", callback_data=f'update_task_{task_id}')
 
 
-def back_button(to_id: int):
+def _back_button(to_id: int):
     return types.InlineKeyboardButton(
         text="Back", callback_data=f'get_task_{to_id}')
 
 
-def add_reminder_button(for_id: int):
+def _add_reminder_button(for_id: int):
     return types.InlineKeyboardButton(
         text="Add reminder", callback_data=f'add_reminder_{for_id}')
 
 
 def get_my_tasks_kb():
     builder = InlineKeyboardBuilder()
-    builder.add(my_tasks_button())
+    builder.add(_my_tasks_button())
     return builder.as_markup()
 
 
 def add_subtask_kb(for_task_id: int):
     builder = InlineKeyboardBuilder()
-    builder.add(add_subtask_button(for_task_id))
+    builder.add(_add_subtask_button(for_task_id))
     return builder.as_markup()
 
 
 def create_task_kb():
     builder = InlineKeyboardBuilder()
-    builder.add(create_task_button())
+    builder.add(_create_task_button())
     return builder.as_markup()
 
 
 def update_task_kb(task_id: int):
     buillder = InlineKeyboardBuilder()
-    buillder.add(update_task_button(task_id))
+    buillder.add(_update_task_button(task_id))
     return buillder.as_markup()
 
 
 def back_kb(to_id: int):
     builder = InlineKeyboardBuilder()
-    builder.add(back_button(to_id))
+    builder.add(_back_button(to_id))
     return builder.as_markup()
 
 
-def task_buttons_builder(tasks: list[TaskViewSchema]):
+def task_buttons_builder(tasks: list[Task]):
     builder = InlineKeyboardBuilder()
     for task in tasks:
         builder.add(types.InlineKeyboardButton(
@@ -80,7 +79,7 @@ def task_buttons_builder(tasks: list[TaskViewSchema]):
     return builder
 
 
-def tasks_kb(tasks: list[TaskViewSchema], additional_buttons: list[types.InlineKeyboardButton]):
+def tasks_kb(tasks: list[Task], additional_buttons: list[types.InlineKeyboardButton]):
     builder = task_buttons_builder(tasks)
     for add in additional_buttons:
         builder.add(add)
@@ -93,19 +92,19 @@ def tasks_kb(tasks: list[TaskViewSchema], additional_buttons: list[types.InlineK
     return builder.as_markup()
 
 
-def root_list_kb(tasks: list[TaskViewSchema]):
-    return tasks_kb(tasks, [create_task_button()])
+def root_list_kb(tasks: list[Task]):
+    return tasks_kb(tasks, [_create_task_button()])
 
 
-def for_task_info_kb(task: TaskViewSchema):
+def for_task_info_kb(task: Task):
     buttons = []
     if not bool(task.pass_date):
-        buttons += [add_subtask_button(
-            task.id), update_task_button(task.id), add_reminder_button(task.id)]
-    if task.task_id:
-        buttons.append(back_button(task.task_id))
-    buttons.append(delete_task_button(task.id))
-    buttons.append(my_tasks_button())
+        buttons += [_add_subtask_button(
+            task.id), _update_task_button(task.id), _add_reminder_button(task.id)]
+    if task.parent_id:
+        buttons.append(_back_button(task.parent_id))
+    buttons.append(_delete_task_button(task.id))
+    buttons.append(_my_tasks_button())
     return tasks_kb(task.subtasks, buttons)
 
 
@@ -120,7 +119,7 @@ def for_task_update_kb(for_task_id: int):
             text="Change deadline", callback_data=f"change_deadline"),
         types.InlineKeyboardButton(
             text="Mark task as done", callback_data=f"mark_done_{for_task_id}"),
-        back_button(for_task_id)
+        _back_button(for_task_id)
     )
     builder.adjust(*[1, 1, 1, 1, 1])
     return builder.as_markup()
@@ -176,7 +175,7 @@ def remind_time_kb(deadline_local: datetime, selected_date: datetime):
 
 def add_reminder_kb():
     builder = InlineKeyboardBuilder()
-    builder.add(add_reminder_button())
+    builder.add(_add_reminder_button())
     return builder.as_markup()
 
 

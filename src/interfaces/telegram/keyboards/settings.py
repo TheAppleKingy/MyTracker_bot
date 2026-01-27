@@ -1,30 +1,31 @@
 from aiogram import types
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
 
-def settings_kb():
-    return types.ReplyKeyboardMarkup(
-        keyboard=[[types.KeyboardButton(text='/settings')]],
+def get_settings_kb():
+    builder = ReplyKeyboardBuilder()
+    builder.add(types.KeyboardButton(text='/settings'))
+    return builder.as_markup(
         resize_keyboard=True,
         one_time_keyboard=False
     )
 
 
-def next_tz_page_button(next_page: str):
+def _next_tz_page_button(next_page: str):
     return types.InlineKeyboardButton(text='Next', callback_data=f'timezones_page_{next_page}')
 
 
-def prev_tz_page_button(prev_page: str):
+def _prev_tz_page_button(prev_page: str):
     return types.InlineKeyboardButton(text='Prev', callback_data=f'timezones_page_{prev_page}')
 
 
-def set_timezone_button():
+def _set_timezone_button():
     return types.InlineKeyboardButton(text='Set timezone', callback_data='set_timezone')
 
 
-def settings_list_kb():
+def get_settings_list_kb():
     builder = InlineKeyboardBuilder()
-    buttons = [set_timezone_button()]
+    buttons = [_set_timezone_button()]
     builder.add(*buttons)
     builder.adjust(*[1]*len(buttons))
     return builder.as_markup()
@@ -33,7 +34,7 @@ def settings_list_kb():
 def get_timezones_page_kb(page: int, step: int, timezones: list[str]):
     start_idx = page*step
     page_count = len(timezones) // step
-    additional = [prev_tz_page_button(page-1), next_tz_page_button(page+1)]
+    additional = [_prev_tz_page_button(page-1), _next_tz_page_button(page+1)]
     if page + 1 > page_count:
         additional = additional[:-1]
     elif page - 1 < 1:

@@ -3,9 +3,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import StateFilter
 from aiogram.filters.command import Command
 
-from keyboards.settings import settings_list_kb
-
-from handlers.rollback import rollback
+from src.interfaces.telegram.keyboards.settings import settings_list_kb
+from src.interfaces.telegram.handlers.rollback import rollback
 
 settings_router = Router(name='Settings')
 
