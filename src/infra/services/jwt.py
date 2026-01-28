@@ -1,7 +1,7 @@
 import jwt
 import time
 
-from src.application.interfaces.token_service import TokenServiceInterface
+from src.application.interfaces.services import TokenServiceInterface
 
 
 class JWTService(TokenServiceInterface):

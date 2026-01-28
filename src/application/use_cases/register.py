@@ -1,4 +1,4 @@
-from application.interfaces.clients.backend import BackendClientInterface
+from src.application.interfaces.clients import BackendClientInterface
 
 
 class RegisterUseCase:

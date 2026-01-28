@@ -6,8 +6,8 @@ from typing import Optional
 @dataclass
 class Task:
     title: str
-    id: int = None
     deadline: datetime
+    id: int = None
     description: Optional[str] = None
     parent_id: Optional[int] = None
     creation_time: Optional[datetime] = None

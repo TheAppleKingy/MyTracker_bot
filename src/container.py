@@ -1,21 +1,23 @@
 from dishka import make_async_container, Provider, provide, Scope
 from dishka.integrations.aiogram import AiogramProvider
-from redis import from_url, Redis
+from redis.asyncio import from_url, Redis
 from aiogram.fsm.storage.redis import RedisStorage
 from aiogram import Bot, Dispatcher
 
-from application.interfaces.clients import *
-from src.application.interfaces.token_service import TokenServiceInterface
-from infra.clients import *
+from src.application.interfaces.clients import *
+from src.application.interfaces import *
+from src.application.interfaces.services import *
+from src.infra.clients import *
 from src.infra.configs import RedisConfig, BotConfig
-from src.infra.jwt import JWTService
+from src.infra.services import *
+from src.infra.redis_storage import RedisBotStorage
 
 
 class ClientsProvider(Provider):
     scope = Scope.REQUEST
 
     @provide
-    def get_backend_provider(self, conf: BotConfig, token_service: TokenServiceInterface) -> BackendClientInterface:
+    def get_backend_client(self, conf: BotConfig, token_service: TokenServiceInterface) -> BackendClientInterface:
         return HttpBackendClient(conf.base_api_url, token_service)
 
     country_client = provide(CountryClient, provides=CountryClientInterface)
@@ -23,10 +25,6 @@ class ClientsProvider(Provider):
     @provide
     def get_tz_client(self, conf: BotConfig) -> TimezoneClientInterface:
         return HttpTZClient(conf.timezone_db_api_key, conf.timezone_db_url)
-
-    @provide(scope=Scope.APP)
-    def get_redis_client(self, conf: RedisConfig) -> Redis:
-        return from_url(conf.conn_url)
 
 
 class ServiceProvider(Provider):
@@ -36,17 +34,33 @@ class ServiceProvider(Provider):
     def get_token_service(self, conf: BotConfig) -> TokenServiceInterface:
         return JWTService(conf.secret)
 
+    notify_service = provide(CeleryNotifyService, provides=NotifyServiceInterface)
 
-conf_provider = Provider(scope=Scope.APP)
-conf_provider.provide_all(BotConfig, RedisConfig)
+
+class ConfProvider(Provider):
+    scope = Scope.APP
+
+    @provide
+    def bot_conf(self) -> BotConfig:
+        return BotConfig()
+
+    @provide
+    def redis_conf(self) -> RedisConfig:
+        return RedisConfig()
 
 
 class SharedProvider(Provider):
     scope = Scope.APP
 
     @provide
-    def get_storage(self, cli: Redis) -> RedisStorage:
-        return RedisStorage(cli)
+    def get_redis(self, conf: RedisConfig) -> Redis:
+        return from_url(conf.conn_url, decode_responses=True)
+
+    redis_bot_storage = provide(RedisBotStorage, provides=StorageInterface, scope=Scope.REQUEST)
+
+    @provide
+    def fsm_storage(self, redis: Redis) -> RedisStorage:
+        return RedisStorage(redis=redis)
 
     @provide
     def get_bot(self, conf: BotConfig) -> Bot:
@@ -60,4 +74,7 @@ class SharedProvider(Provider):
 container = make_async_container(
     ClientsProvider(),
     ServiceProvider(),
-    AiogramProvider())
+    ConfProvider(),
+    SharedProvider(),
+    AiogramProvider()
+)

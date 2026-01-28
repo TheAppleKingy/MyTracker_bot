@@ -6,7 +6,6 @@ from dishka.integrations.aiogram import setup_dishka
 
 from src.interfaces.telegram.handlers import *
 from src.container import container
-from middleware import BackendResponseMiddleware, RollbackDetectorMiddleware
 
 
 async def setup():
@@ -22,7 +21,7 @@ async def setup():
         tz_router,
         delete_task_router
     )
-    setup_dishka(container, dispatcher)
+    setup_dishka(container, dispatcher, auto_inject=True)
     bot = await container.get(Bot)
     await dispatcher.start_polling(bot)
 
@@ -32,4 +31,4 @@ def start():
 
 
 if __name__ == '__main__':
-    watchfiles.run_process('.', target='main.start')
+    watchfiles.run_process('.', target=start)

@@ -1,7 +1,5 @@
-from typing import Protocol, Optional
-from datetime import timezone
+from typing import Protocol
 
 
 class TimezoneClientInterface(Protocol):
-    async def get_tz(self, tg_name: str) -> Optional[timezone]: ...
-    async def set_tz(self, tg_name: str) -> None: ...
+    async def get_country_tz_offsets_minutes(self, country_code: str) -> list[int]: ...

@@ -4,7 +4,7 @@ from typing import Union, Optional
 from datetime import datetime
 
 from application.interfaces.clients import BackendClientInterface
-from src.application.interfaces.token_service import TokenServiceInterface
+from application.interfaces.services import TokenServiceInterface
 from src.domain.entities import Task
 
 

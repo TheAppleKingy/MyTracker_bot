@@ -6,7 +6,7 @@ def _registration_button():
     return types.InlineKeyboardButton(text="Register", callback_data="register")
 
 
-def get_start_kb():
+def register_kb():
     builder = InlineKeyboardBuilder()
     builder.add(
         _registration_button()
