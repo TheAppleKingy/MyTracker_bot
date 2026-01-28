@@ -5,7 +5,7 @@ from aiogram import types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from src.domain.entities import Task
-from .shared import _main_button
+from .shared import _main_button, _back_button
 
 
 def _task_info_button(task: Task):
@@ -36,11 +36,19 @@ def _add_reminder_button(task_id: int):
     return types.InlineKeyboardButton(text="Add reminder", callback_data=f'add_reminder_{task_id}')
 
 
-def _task_buttons_builder(tasks: list[Task]):
+def _task_buttons_builder(tasks: list[Task], page: int, size: int):
     builder = InlineKeyboardBuilder()
     for task in tasks:
         builder.add(_task_info_button(task))
     return builder
+
+
+def _next_active_task_page_button(page: int):
+    return types.InlineKeyboardButton(text=">", callback_data=f"get_active_task_page_{page}")
+
+
+def _prev_active_task_page_button(page: int):
+    return types.InlineKeyboardButton(text="<", callback_data=f"get_active_task_page_{page}")
 
 
 def tasks_kb(tasks: list[Task], additional_buttons: list[types.InlineKeyboardButton]):
@@ -56,8 +64,21 @@ def tasks_kb(tasks: list[Task], additional_buttons: list[types.InlineKeyboardBut
     return builder.as_markup()
 
 
-def root_active_tasks_kb(tasks: list[Task]):
-    return tasks_kb(tasks, [_create_task_button(), _main_button()])
+def page_tasks_kb(tasks: list[Task], prev_page: Optional[int] = None, next_page: Optional[int] = None):
+    builder = InlineKeyboardBuilder()
+    task_buttons = [_task_info_button(task) for task in tasks]
+    navigations = []
+    if prev_page:
+        navigations.append(_prev_active_task_page_button(prev_page))
+    if next_page:
+        navigations.append(_next_active_task_page_button(next_page))
+    builder.add(*task_buttons)
+    builder.adjust(*[1]*len(tasks))
+    if navigations:
+        builder.row(*navigations)
+    builder.row(_create_task_button())
+    builder.row(_main_button())
+    return builder.as_markup()
 
 
 def no_tasks_kb():

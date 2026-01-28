@@ -10,6 +10,12 @@ class Task:
     id: int = None
     description: Optional[str] = None
     parent_id: Optional[int] = None
-    creation_time: Optional[datetime] = None
+    creation_date: Optional[datetime] = None
     pass_date: Optional[datetime] = None
-    subtasks: list["Task"] = field(default_factory=list)
+    subtasks: list["Subtask"] = field(default_factory=list)
+
+
+@dataclass
+class Subtask:
+    id: int
+    title: str

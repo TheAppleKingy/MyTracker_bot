@@ -3,11 +3,11 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
 def _active_tasks_button():
-    return types.InlineKeyboardButton(text="Active tasks", callback_data="get_active_tasks")
+    return types.InlineKeyboardButton(text="Active tasks", callback_data="get_active_task_page_1")
 
 
 def _finished_tasks_button():
-    return types.InlineKeyboardButton(text="Finished tasks", callback_data="get_finished_tasks")
+    return types.InlineKeyboardButton(text="Finished tasks", callback_data="get_finished_task_page_1")
 
 
 def _back_button(callback_data: str):

@@ -3,9 +3,11 @@ import httpx
 from typing import Union, Optional
 from datetime import datetime
 
-from application.interfaces.clients import BackendClientInterface
-from application.interfaces.services import TokenServiceInterface
-from src.domain.entities import Task
+from src.application.interfaces.clients import BackendClientInterface
+from src.application.interfaces.services import TokenServiceInterface
+from src.application.dto.task import TaskViewSchema
+from src.domain.entities import Task, Subtask
+from src.logger import logger
 
 
 class URIs:
@@ -22,6 +24,13 @@ class URIs:
     @property
     def create_task(self):
         return self._base + "/tasks"
+
+    @property
+    def active_tasks(self):
+        return self.create_task
+
+    def task_info(self, task_id: int):
+        return self.create_task + f"/{task_id}"
 
 
 class HttpBackendClient(BackendClientInterface):
@@ -78,3 +87,24 @@ class HttpBackendClient(BackendClientInterface):
         })
         data = self._handle_response(resp)
         return Task(**data)
+
+    async def get_active_tasks(
+        self,
+        tg_name: str,
+        page: int = 1,
+        size: int = 5
+    ) -> tuple[int | None, int | None, list[Task]]:
+        resp = await self._auth_client(tg_name).get(
+            self._uris.active_tasks,
+            params={"page": page, "size": size}
+        )
+        data = self._handle_response(resp)
+        return data["prev_page"], data["next_page"], [Task(**task_data) for task_data in data["tasks"]]
+
+    async def get_task(self, tg_name: str, task_id: int) -> Optional[Task]:
+        resp = await self._auth_client(tg_name).get(self._uris.task_info(task_id))
+        logger.critical(f"{resp.content}, {resp.status_code}")
+        model = TaskViewSchema.model_validate(self._handle_response(resp))
+        task = Task(**model.model_dump(exclude=["subtasks"]))
+        task.subtasks = [Subtask(**subtask_model.model_dump()) for subtask_model in model.subtasks]
+        return task

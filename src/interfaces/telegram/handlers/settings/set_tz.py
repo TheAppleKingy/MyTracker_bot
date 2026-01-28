@@ -5,7 +5,7 @@ from dishka.integrations.aiogram import FromDishka
 from src.application.interfaces.clients import CountryClientInterface, TimezoneClientInterface
 from src.application.interfaces import StorageInterface
 from src.interfaces.telegram.states.settings import SetTZStates
-from src.interfaces.telegram.keyboards.settings import timezones_page_kb, get_timezone_view
+from src.interfaces.telegram.keyboards.settings import timezones_page_kb
 from src.interfaces.telegram.keyboards.shared import main_page_kb, back_kb
 from src.logger import logger
 
@@ -61,10 +61,12 @@ async def set_user_tz(
     storage: FromDishka[StorageInterface]
 ):
     await cq.answer()
-    choosen_offset = int(cq.data.split("_")[-1])
+    prepared_callback_data = cq.data.split("_")
+    choosen_offset = int(prepared_callback_data[-1])
+    presented = prepared_callback_data[-2]
     await storage.set_tz(cq.from_user.username, choosen_offset)
     await state.clear()
     return await cq.message.edit_text(
-        text=f"Choosen timezone {get_timezone_view(choosen_offset)}",
+        text=f"Choosen timezone {presented}",
         reply_markup=back_kb("settings")
     )

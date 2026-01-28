@@ -7,13 +7,6 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from .shared import _back_button
 
 
-def get_timezone_view(offset_min: int) -> str:
-    sign = "-" if offset_min < 0 else "+"
-    hours = abs(offset_min) // 60
-    mins = abs(offset_min) - 60 * hours
-    return f"UTC{sign}{hours}:{0 if mins < 10 else ""}{mins}"
-
-
 def _next_tz_page_button(next_page: str):
     return types.InlineKeyboardButton(text='Next', callback_data=f'timezones_page_{next_page}')
 
@@ -27,9 +20,13 @@ def _set_timezone_button():
 
 
 def _tz_button(offset_min: int):
+    sign = "-" if offset_min < 0 else "+"
+    hours = abs(offset_min) // 60
+    mins = abs(offset_min) - 60 * hours
+    presented = f"UTC{sign}{hours}:{0 if mins < 10 else ""}{mins}"
     return types.InlineKeyboardButton(
-        text=get_timezone_view(offset_min),
-        callback_data=f"set_tz_offset_{offset_min}"
+        text=presented,
+        callback_data=f"set_tz_offset_{presented}_{offset_min}"
     )
 
 
