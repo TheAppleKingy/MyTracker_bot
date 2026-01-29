@@ -64,6 +64,9 @@ async def ask_deadline_date(
         return
     user_tz = await storage.get_tz(cq.from_user.username)
     selected_local: datetime = date.replace(tzinfo=user_tz)
+    now_local = datetime.now(timezone.utc).astimezone(user_tz)
+    if selected_local.date() < now_local.date():
+        return await cq.message.edit_text(f'Deadline date cannot be earlier than today', reply_markup=await kalendar_kb())
     await state.update_data(deadline=date.isoformat())
     await cq.message.edit_text(
         f"Choosen deadline date is {selected_local.strftime('%d.%m.%Y')}",
@@ -86,12 +89,12 @@ async def set_deadline_time(
     user_tz = await storage.get_tz(cq.from_user.username)
     deadline = datetime.fromisoformat(data.get('deadline')).replace(
         hour=deadline_hour, tzinfo=user_tz)
-    data.update({'deadline': deadline.isoformat()})
+    data.update({'deadline': deadline})
     data.pop('rollback_msg', None)
     await cq.message.edit_text(
         f"Choosen deadline time is {'0'+deadline_hour if deadline_hour <= 9 else deadline_hour}h:00m"
     )
-    created = await backend.create_task(**data)
+    created = await backend.create_task(cq.from_user.username, **data)
     await cq.message.answer(
         show_task_data(created, user_tz),
         reply_markup=under_task_info_kb(created),

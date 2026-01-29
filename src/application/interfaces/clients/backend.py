@@ -10,6 +10,7 @@ class BackendClientInterface(Protocol):
 
     async def create_task(
         self,
+        tg_name: str,
         title: str,
         description: str,
         deadline: datetime,
@@ -21,14 +22,14 @@ class BackendClientInterface(Protocol):
         tg_name: str,
         page: int = 1,
         size: int = 5
-    ) -> tuple[int | None, int | None, list[Task]]: ...
+    ) -> tuple[int, int, list[Task]]: ...
 
     async def get_finished_tasks(
         self,
         tg_name: str,
         page: int = 1,
         size: int = 5
-    ) -> tuple[int | None, int | None, list[Task]]: ...
+    ) -> tuple[int, int, list[Task]]: ...
 
     async def get_task(self, tg_name: str, task_id: int) -> Optional[Task]: ...
     async def delete_task(self, tg_name: str, task_id: int) -> None: ...

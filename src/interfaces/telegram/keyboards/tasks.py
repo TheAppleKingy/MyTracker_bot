@@ -36,6 +36,10 @@ def _add_reminder_button(task_id: int):
     return types.InlineKeyboardButton(text="Add reminder", callback_data=f'add_reminder_{task_id}')
 
 
+def _finish_task_button(task_id: int):
+    return types.InlineKeyboardButton(text="Finish", callback_data=f"finish_task_{task_id}")
+
+
 def _task_buttons_builder(tasks: list[Task], page: int, size: int):
     builder = InlineKeyboardBuilder()
     for task in tasks:
@@ -64,7 +68,7 @@ def tasks_kb(tasks: list[Task], additional_buttons: list[types.InlineKeyboardBut
     return builder.as_markup()
 
 
-def page_tasks_kb(tasks: list[Task], prev_page: Optional[int] = None, next_page: Optional[int] = None):
+def page_tasks_kb(tasks: list[Task], prev_page: int = 0, next_page: int = 0):
     builder = InlineKeyboardBuilder()
     task_buttons = [_task_info_button(task) for task in tasks]
     navigations = []
@@ -83,7 +87,8 @@ def page_tasks_kb(tasks: list[Task], prev_page: Optional[int] = None, next_page:
 
 def no_tasks_kb():
     builder = InlineKeyboardBuilder()
-    builder.add(_create_task_button(), _main_button())
+    builder.add(_create_task_button(), _back_button("main_page"))
+    builder.adjust(1, 1)
     return builder.as_markup()
 
 
@@ -91,9 +96,14 @@ def under_task_info_kb(task: Task):
     builder = InlineKeyboardBuilder()
     builder.add(
         _subtasks_button(task.id),
-        _delete_task_button(task.id),
         _update_task_button(task.id),
         _add_reminder_button(task.id),
-        _add_subtask_button(task.id)
+        _add_subtask_button(task.id),
+        _delete_task_button(task.id),
     )
+    if not task.pass_date:
+        builder.add(_finish_task_button(task.id))
+    builder.adjust(2)
+    back_callback = "main_page" if not task.parent_id else f"get_subtasks_{task.parent_id}"
+    builder.row(_back_button(back_callback))
     return builder.as_markup()

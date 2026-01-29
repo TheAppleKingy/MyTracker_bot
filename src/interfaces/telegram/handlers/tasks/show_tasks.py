@@ -35,10 +35,14 @@ async def finished_tasks(
     backend: FromDishka[BackendClientInterface]
 ):
     await cq.answer()
-    tasks = await backend.get_finished_tasks(cq.from_user.username)
+    page = int(cq.data.split("_")[-1])
+    prev, next_, tasks = await backend.get_finished_tasks(cq.from_user.username, page=page)
     if not tasks:
         return await cq.message.answer("You have no finished tasks", reply_markup=no_tasks_kb())
-    await cq.message.answer("Your finished tasks", reply_markup=page_tasks_kb(tasks))
+    return await cq.message.answer(
+        "Your finished tasks",
+        reply_markup=page_tasks_kb(tasks, prev_page=prev, next_page=next_)
+    )
 
 
 @show_task_router.callback_query(F.data.startswith('get_task_'))
