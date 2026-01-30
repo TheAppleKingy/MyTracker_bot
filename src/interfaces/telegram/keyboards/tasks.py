@@ -5,15 +5,11 @@ from aiogram import types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from src.domain.entities import Task
-from .shared import _main_button, _back_button
+from .shared import _main_button, _back_button, _next_button, _prev_button
 
 
 def _task_info_button(task: Task):
     return types.InlineKeyboardButton(text=task.title, callback_data=f"get_task_{task.id}")
-
-
-def _subtasks_button(parent_id: int):
-    return types.InlineKeyboardButton(text="Subtasks", callback_data=f"get_subtasks_{parent_id}")
 
 
 def _add_subtask_button(parent_id: int):
@@ -40,48 +36,39 @@ def _finish_task_button(task_id: int):
     return types.InlineKeyboardButton(text="Finish", callback_data=f"finish_task_{task_id}")
 
 
-def _task_buttons_builder(tasks: list[Task], page: int, size: int):
-    builder = InlineKeyboardBuilder()
-    for task in tasks:
-        builder.add(_task_info_button(task))
-    return builder
+def _subtasks_button(parent_id: int, status: Literal["active", "finished"], page: int):
+    return types.InlineKeyboardButton(text=f"{status.capitalize()} subtasks", callback_data=f"get_subtasks_{status}_{parent_id}_{page}")
 
 
-def _next_active_task_page_button(page: int):
-    return types.InlineKeyboardButton(text=">", callback_data=f"get_active_task_page_{page}")
-
-
-def _prev_active_task_page_button(page: int):
-    return types.InlineKeyboardButton(text="<", callback_data=f"get_active_task_page_{page}")
-
-
-def tasks_kb(tasks: list[Task], additional_buttons: list[types.InlineKeyboardButton]):
-    builder = _task_buttons_builder(tasks)
-    for add in additional_buttons:
-        builder.add(add)
-    additional_size = [2]*(len(additional_buttons)//2)
-    if len(additional_buttons) % 2:
-        additional_size.append(1)
-    sizes = [*additional_size] if not tasks else [
-        *[1]*len(tasks), *additional_size]
-    builder.adjust(*sizes)
-    return builder.as_markup()
-
-
-def page_tasks_kb(tasks: list[Task], prev_page: int = 0, next_page: int = 0):
+def page_tasks_kb(
+    tasks: list[Task],
+    status: Literal["active", "finished"],
+    prev_page: int = 0,
+    next_page: int = 0,
+    parent_id: Optional[int] = None
+):
     builder = InlineKeyboardBuilder()
     task_buttons = [_task_info_button(task) for task in tasks]
-    navigations = []
+    additional = []
     if prev_page:
-        navigations.append(_prev_active_task_page_button(prev_page))
+        additional.append(
+            _prev_button(
+                f"get_tasks_{status}_{prev_page}" if not parent_id else f"get_subtasks_{status}_{prev_page}"
+            )
+        )
+    if parent_id:
+        additional.append(_back_button(f"get_task_{parent_id}"))
+    else:
+        additional.extend([_create_task_button(), _main_button()])
     if next_page:
-        navigations.append(_next_active_task_page_button(next_page))
+        additional.append(
+            _next_button(
+                f"get_tasks_{status}_{next_page}" if not parent_id else f"get_subtasks_{status}_{next_page}"
+            )
+        )
     builder.add(*task_buttons)
     builder.adjust(*[1]*len(tasks))
-    if navigations:
-        builder.row(*navigations)
-    builder.row(_create_task_button())
-    builder.row(_main_button())
+    builder.row(*additional)
     return builder.as_markup()
 
 
@@ -92,10 +79,18 @@ def no_tasks_kb():
     return builder.as_markup()
 
 
+def no_subtasks_kb(parent_id: int):
+    builder = InlineKeyboardBuilder()
+    builder.add(_add_subtask_button(parent_id), _back_button(f"get_task_{parent_id}"))
+    builder.adjust(1, 1)
+    return builder.as_markup()
+
+
 def under_task_info_kb(task: Task):
     builder = InlineKeyboardBuilder()
     builder.add(
-        _subtasks_button(task.id),
+        _subtasks_button(task.id, "active", 1),
+        _subtasks_button(task.id, "finished", 1),
         _update_task_button(task.id),
         _add_reminder_button(task.id),
         _add_subtask_button(task.id),
@@ -104,6 +99,7 @@ def under_task_info_kb(task: Task):
     if not task.pass_date:
         builder.add(_finish_task_button(task.id))
     builder.adjust(2)
-    back_callback = "main_page" if not task.parent_id else f"get_subtasks_{task.parent_id}"
+    status = ["active", "finished"][bool(task.pass_date)]
+    back_callback = f"get_tasks_{status}_1" if not task.parent_id else f"get_subtasks_{status}_{task.parent_id}_1"
     builder.row(_back_button(back_callback))
     return builder.as_markup()

@@ -1,13 +1,7 @@
+from typing import Literal
+
 from aiogram import types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-
-
-def _active_tasks_button():
-    return types.InlineKeyboardButton(text="Active tasks", callback_data="get_active_task_page_1")
-
-
-def _finished_tasks_button():
-    return types.InlineKeyboardButton(text="Finished tasks", callback_data="get_finished_task_page_1")
 
 
 def _back_button(callback_data: str):
@@ -22,6 +16,18 @@ def _main_button():
     return types.InlineKeyboardButton(text="Main page", callback_data='main_page')
 
 
+def _tasks_button(status: Literal["active", "finished"], page: int):
+    return types.InlineKeyboardButton(text=f"{status.capitalize()} tasks", callback_data=f"get_tasks_{status}_{page}")
+
+
+def _next_button(callback_data: str):
+    return types.InlineKeyboardButton(text=">", callback_data=callback_data)
+
+
+def _prev_button(callback_data: str):
+    return types.InlineKeyboardButton(text="<", callback_data=callback_data)
+
+
 def back_kb(callback_data: str):
     builder = InlineKeyboardBuilder()
     builder.add(_back_button(callback_data))
@@ -30,7 +36,7 @@ def back_kb(callback_data: str):
 
 def main_kb():
     builder = InlineKeyboardBuilder()
-    builder.add(_active_tasks_button(), _finished_tasks_button(), _settings_button())
+    builder.add(_tasks_button("active", 1), _tasks_button("finished", 1), _settings_button())
     builder.adjust(*[1]*3)
     return builder.as_markup()
 

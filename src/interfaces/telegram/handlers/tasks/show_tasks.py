@@ -4,44 +4,50 @@ from dishka.integrations.aiogram import FromDishka
 
 from src.application.interfaces.clients import BackendClientInterface
 from src.application.interfaces import StorageInterface
-from src.interfaces.telegram.keyboards.tasks import under_task_info_kb, no_tasks_kb, page_tasks_kb
+from src.interfaces.telegram.keyboards.tasks import under_task_info_kb, no_tasks_kb, page_tasks_kb, no_subtasks_kb
 from src.interfaces.presentators.task import show_task_data
 from src.logger import logger
 
 show_task_router = Router(name='Show tasks')
 
 
-@show_task_router.callback_query(F.data.startswith('get_active_task_page_'))
-async def active_tasks_page(
+@show_task_router.callback_query(F.data.startswith('get_tasks_'))
+async def tasks_page(
     cq: types.CallbackQuery,
     state: FSMContext,
     backend: FromDishka[BackendClientInterface]
 ):
     await cq.answer()
-    page = int(cq.data.split("_")[-1])
-    prev, next_, tasks = await backend.get_active_tasks(cq.from_user.username, page=page)
+    data = cq.data.split("_")[2:]
+    status, page = data[0], int(data[1])
+    ok, resp = await backend.get_tasks(cq.from_user.username, status, page=page)
+    if not ok:
+        return
+    prev, next_, tasks = resp
     if not tasks:
-        return await cq.message.answer("You have no active tasks", reply_markup=no_tasks_kb())
+        return await cq.message.answer(f"<b>You have no {status} tasks</b>", parse_mode="HTML", reply_markup=no_tasks_kb())
     return await cq.message.answer(
-        "Your active tasks",
-        reply_markup=page_tasks_kb(tasks, prev_page=prev, next_page=next_)
+        f"<b>Your {status} tasks</b>",
+        reply_markup=page_tasks_kb(tasks, status, prev_page=prev, next_page=next_),
+        parse_mode="HTML"
     )
 
 
-@show_task_router.callback_query(F.data.startswith('get_finished_task_page_'))
-async def finished_tasks(
+@show_task_router.callback_query(F.data.startswith("get_subtasks_"))
+async def subtasks_page(
     cq: types.CallbackQuery,
-    state: FSMContext,
-    backend: FromDishka[BackendClientInterface]
+    backend: FromDishka[BackendClientInterface],
 ):
     await cq.answer()
-    page = int(cq.data.split("_")[-1])
-    prev, next_, tasks = await backend.get_finished_tasks(cq.from_user.username, page=page)
+    data = cq.data.split("_")[2:]
+    status, parent_id, page = data[0], int(data[1]), int(data[2])
+    prev, next_, tasks = await backend.get_subtasks(cq.from_user.username, status, parent_id, page=page)
     if not tasks:
-        return await cq.message.answer("You have no finished tasks", reply_markup=no_tasks_kb())
+        return await cq.message.answer(f"<b>You have no {status} subtasks</b>", parse_mode="HTML", reply_markup=no_subtasks_kb(parent_id))
     return await cq.message.answer(
-        "Your finished tasks",
-        reply_markup=page_tasks_kb(tasks, prev_page=prev, next_page=next_)
+        f"<b>Your {status} subtasks</b>",
+        parse_mode="HTML",
+        reply_markup=page_tasks_kb(tasks, status, prev_page=prev, next_page=next_, parent_id=parent_id)
     )
 
 

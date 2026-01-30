@@ -1,1 +1,1 @@
-from .task import Task, Subtask
+from .task import Task, TaskPreview

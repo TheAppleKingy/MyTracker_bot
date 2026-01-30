@@ -12,7 +12,6 @@ class TaskViewSchema(BaseModel):
     deadline: datetime
     pass_date: Optional[datetime] = None
     parent_id: Optional[int] = None
-    subtasks: list["TaskPreviewDTO"] = []
 
 
 class TaskPreviewDTO(BaseModel):

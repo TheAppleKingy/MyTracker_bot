@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field, fields
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional
 
 
@@ -12,10 +12,10 @@ class Task:
     parent_id: Optional[int] = None
     creation_date: Optional[datetime] = None
     pass_date: Optional[datetime] = None
-    subtasks: list["Subtask"] = field(default_factory=list)
 
 
 @dataclass
-class Subtask:
+class TaskPreview:
     id: int
     title: str
+    parent_id: Optional[int] = None

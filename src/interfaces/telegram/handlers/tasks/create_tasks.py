@@ -22,14 +22,14 @@ async def ask_title(cq: types.CallbackQuery, state: FSMContext):
     await cq.answer()
     await state.clear()
     await state.set_state(CreateTaskStates.waiting_title)
-    return await cq.message.answer("Send me task title")
+    return await cq.message.answer("<b>Send me task title</b>", parse_mode="HTML")
 
 
 @create_task_router.message(CreateTaskStates.waiting_title)
 async def ask_description(message: types.Message, state: FSMContext):
     await state.update_data({'title': message.text})
     await state.set_state(CreateTaskStates.waiting_description)
-    return await message.answer('Send me description of task')
+    return await message.answer('<b>Send me description of task</b>', parse_mode="HTML")
 
 
 @create_task_router.message(CreateTaskStates.waiting_description)
@@ -43,11 +43,16 @@ async def check_tz(
     user_tz = await storage.get_tz(message.from_user.username)
     if not user_tz:
         await state.clear()
-        return await message.answer("You have to define your timezone in settings", reply_markup=main_page_kb())
+        return await message.answer(
+            "<b>You have to define your timezone in settings</b>",
+            reply_markup=main_page_kb(),
+            parse_mode="HTML"
+        )
     now_local = datetime.now(timezone.utc).astimezone(user_tz)
     return await message.answer(
-        'Choose deadline date',
-        reply_markup=await kalendar_kb(now_local.year, now_local.month)
+        '<b>Choose deadline date</b>',
+        reply_markup=await kalendar_kb(now_local.year, now_local.month),
+        parse_mode="HTML"
     )
 
 
@@ -66,11 +71,16 @@ async def ask_deadline_date(
     selected_local: datetime = date.replace(tzinfo=user_tz)
     now_local = datetime.now(timezone.utc).astimezone(user_tz)
     if selected_local.date() < now_local.date():
-        return await cq.message.edit_text(f'Deadline date cannot be earlier than today', reply_markup=await kalendar_kb())
+        return await cq.message.edit_text(
+            f'<b>Deadline date cannot be earlier than today</b>',
+            reply_markup=await kalendar_kb(),
+            parse_mode="HTML"
+        )
     await state.update_data(deadline=date.isoformat())
     await cq.message.edit_text(
-        f"Choosen deadline date is {selected_local.strftime('%d.%m.%Y')}",
-        reply_markup=None
+        f"<b>Choosen deadline date is {selected_local.strftime('%d.%m.%Y')}</b>",
+        reply_markup=None,
+        parse_mode="HTML"
     )
     return await cq.message.answer("Select deadline time", reply_markup=deadline_time_kb(user_tz, date))
 
@@ -92,7 +102,8 @@ async def set_deadline_time(
     data.update({'deadline': deadline})
     data.pop('rollback_msg', None)
     await cq.message.edit_text(
-        f"Choosen deadline time is {'0'+deadline_hour if deadline_hour <= 9 else deadline_hour}h:00m"
+        f"<b>Choosen deadline time is {'0'+deadline_hour if deadline_hour <= 9 else deadline_hour}h:00m</b>",
+        parse_mode="HTML"
     )
     created = await backend.create_task(cq.from_user.username, **data)
     await cq.message.answer(
@@ -109,4 +120,4 @@ async def create_subtask(cq: types.CallbackQuery, state: FSMContext):
     parent_id = int(cq.data.split('_')[-1])
     await state.update_data(parent_id=parent_id)
     await state.set_state(CreateTaskStates.waiting_title)
-    return await cq.message.answer('Send me subtask title')
+    return await cq.message.answer('<b>Send me subtask title</b>', parse_mode="HTML")

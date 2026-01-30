@@ -11,6 +11,7 @@ from src.infra.clients import *
 from src.infra.configs import RedisConfig, BotConfig
 from src.infra.services import *
 from src.infra.redis_storage import RedisBotStorage
+from src.interfaces.telegram.handlers.middleware import HandleErrorMiddleware
 
 
 class ClientsProvider(Provider):
@@ -68,7 +69,10 @@ class SharedProvider(Provider):
 
     @provide
     def get_dispatcher(self, storage: RedisStorage) -> Dispatcher:
-        return Dispatcher(storage=storage)
+        dispatcher = Dispatcher(storage=storage)
+        dispatcher.message.middleware(HandleErrorMiddleware())
+        dispatcher.callback_query.middleware(HandleErrorMiddleware())
+        return dispatcher
 
 
 container = make_async_container(

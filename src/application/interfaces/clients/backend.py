@@ -1,12 +1,17 @@
-from typing import Protocol, Union, Optional
+from typing import Protocol, Union, Optional, Literal, Any, Generic, TypeVar
 from datetime import datetime
 
-from src.domain.entities import Task
+from src.domain.entities import Task, TaskPreview
+
+T = TypeVar('T')
+
+# BackendResponse теперь generic
+BackendResponse = tuple[bool, Union[str, T]]
 
 
 class BackendClientInterface(Protocol):
-    async def register(self, tg_name: str) -> Union[str, None]: ...
-    async def check_registered(self, tg_name: str) -> bool: ...
+    async def register(self, tg_name: str) -> BackendResponse[Optional[str]]: ...
+    async def check_registered(self, tg_name: str) -> BackendResponse[bool]: ...
 
     async def create_task(
         self,
@@ -15,21 +20,24 @@ class BackendClientInterface(Protocol):
         description: str,
         deadline: datetime,
         parent_id: Optional[int] = None
-    ) -> Task: ...
+    ) -> BackendResponse[Task]: ...
 
-    async def get_active_tasks(
+    async def get_task(self, tg_name: str, task_id: int) -> BackendResponse[Optional[Task]]: ...
+    async def delete_task(self, tg_name: str, task_id: int) -> BackendResponse[None]: ...
+
+    async def get_subtasks(
         self,
         tg_name: str,
+        status: Literal["active", "finished"],
+        parent_id: int,
         page: int = 1,
         size: int = 5
-    ) -> tuple[int, int, list[Task]]: ...
+    ) -> BackendResponse[tuple[int, int, list[TaskPreview]]]: ...
 
-    async def get_finished_tasks(
+    async def get_tasks(
         self,
         tg_name: str,
+        status: Literal["active", "finished"],
         page: int = 1,
         size: int = 5
-    ) -> tuple[int, int, list[Task]]: ...
-
-    async def get_task(self, tg_name: str, task_id: int) -> Optional[Task]: ...
-    async def delete_task(self, tg_name: str, task_id: int) -> None: ...
+    ) -> BackendResponse[tuple[int, int, list[TaskPreview]]]: ...
