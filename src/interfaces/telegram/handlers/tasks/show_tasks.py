@@ -5,8 +5,10 @@ from dishka.integrations.aiogram import FromDishka
 from src.application.interfaces.clients import BackendClientInterface
 from src.application.interfaces import StorageInterface
 from src.interfaces.telegram.keyboards.tasks import under_task_info_kb, no_tasks_kb, page_tasks_kb, no_subtasks_kb
+from src.interfaces.telegram.keyboards.shared import main_page_kb
 from src.interfaces.presentators.task import show_task_data
 from src.logger import logger
+from src.interfaces.telegram.handlers.errors import HandlerError
 
 show_task_router = Router(name='Show tasks')
 
@@ -41,7 +43,10 @@ async def subtasks_page(
     await cq.answer()
     data = cq.data.split("_")[2:]
     status, parent_id, page = data[0], int(data[1]), int(data[2])
-    prev, next_, tasks = await backend.get_subtasks(cq.from_user.username, status, parent_id, page=page)
+    ok, resp = await backend.get_subtasks(cq.from_user.username, status, parent_id, page=page)
+    if not ok:
+        return
+    prev, next_, tasks = resp
     if not tasks:
         return await cq.message.answer(f"<b>You have no {status} subtasks</b>", parse_mode="HTML", reply_markup=no_subtasks_kb(parent_id))
     return await cq.message.answer(
@@ -61,7 +66,9 @@ async def task_info(
     await cq.answer()
     await state.clear()
     task_id = int(cq.data.split('_')[-1])
-    task = await backend.get_task(cq.from_user.username, task_id)
+    ok, task = await backend.get_task(cq.from_user.username, task_id)
+    if not ok:
+        raise HandlerError(task, kb=main_page_kb())
     user_tz = await storage.get_tz(cq.from_user.username)
     return await cq.message.answer(
         text=show_task_data(task, user_tz),

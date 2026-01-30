@@ -12,4 +12,4 @@ class CountryClient(CountryClientInterface):
             raise InvalidCountryNameError("Invalid country name. Try again", kb=None)
         if len(results) != 1:
             raise InvalidCountryNameError("Invalid country name. Try again", kb=None)
-        return results[0].alpha_2
+        return results[0].alpha_2  # type: ignore

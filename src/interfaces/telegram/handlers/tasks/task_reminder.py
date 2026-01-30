@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
-from aiogram3_calendar import simple_cal_callback, SimpleCalendar as calendar
+from aiogram3_calendar import simple_cal_callback, SimpleCalendar as calendar   # type: ignore
 from dishka.integrations.aiogram import FromDishka
 
 from src.interfaces.telegram.keyboards.times import kalendar_kb, remind_time_kb
@@ -24,16 +24,16 @@ async def add_reminder(
 ):
     await cq.answer()
     await state.clear()
-    task_id = int(cq.data.split('_')[-1])
-    task = await backend.get_task(cq.from_user.username, task_id)
-    user_tz = await storage.get_tz(cq.from_user.username)
+    task_id = int(cq.data.split('_')[-1])   # type: ignore
+    _, task = await backend.get_task(cq.from_user.username, task_id)   # type: ignore
+    user_tz = await storage.get_tz(cq.from_user.username)   # type: ignore
     await state.update_data(
-        task_id=task.id,
-        task_deadline_local=task.deadline.astimezone(user_tz).isoformat(),
-        task_title=task.title
+        task_id=task.id,  # type: ignore
+        task_deadline_local=task.deadline.astimezone(user_tz).isoformat(),  # type: ignore
+        task_title=task.title  # type: ignore
     )
     now_local = datetime.now(timezone.utc).astimezone(user_tz)
-    return await cq.message.answer(
+    return await cq.message.answer(  # type: ignore
         text="Choose remind date",
         reply_markup=await kalendar_kb(now_local.year, now_local.month)
     )

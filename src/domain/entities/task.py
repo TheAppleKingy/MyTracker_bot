@@ -7,7 +7,7 @@ from typing import Optional
 class Task:
     title: str
     deadline: datetime
-    id: int = None
+    id: int = None  # type: ignore
     description: Optional[str] = None
     parent_id: Optional[int] = None
     creation_date: Optional[datetime] = None

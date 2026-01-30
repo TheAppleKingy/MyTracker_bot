@@ -20,8 +20,8 @@ def _create_task_button():
     return types.InlineKeyboardButton(text="Create task", callback_data='create_task')
 
 
-def _delete_task_button(task_id: int):
-    return types.InlineKeyboardButton(text="Delete", callback_data=f'delete_task_{task_id}')
+def _delete_task_button(task_id: int, parent_id: Optional[int] = None):
+    return types.InlineKeyboardButton(text="Delete", callback_data=f'delete_task_{task_id}_{parent_id}')
 
 
 def _update_task_button(task_id: int):
@@ -59,7 +59,7 @@ def page_tasks_kb(
     if parent_id:
         additional.append(_back_button(f"get_task_{parent_id}"))
     else:
-        additional.extend([_create_task_button(), _main_button()])
+        additional.extend([_create_task_button(), _back_button("main_page")])
     if next_page:
         additional.append(
             _next_button(
@@ -94,7 +94,7 @@ def under_task_info_kb(task: Task):
         _update_task_button(task.id),
         _add_reminder_button(task.id),
         _add_subtask_button(task.id),
-        _delete_task_button(task.id),
+        _delete_task_button(task.id, task.parent_id),
     )
     if not task.pass_date:
         builder.add(_finish_task_button(task.id))

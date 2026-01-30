@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from aiogram import types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram3_calendar import SimpleCalendar
+from aiogram3_calendar import SimpleCalendar   # type: ignore
 
 
 async def kalendar_kb(year: Optional[int] = None, month: Optional[int] = None):
@@ -35,7 +35,7 @@ def time_kb(
 
 def deadline_time_kb(user_tz: timezone, selected_date: datetime, for_update: bool = False):
     now_local = datetime.now(timezone.utc).astimezone(user_tz)
-    action = 'set'
+    action: Literal["set", "update"] = 'set'
     if for_update:
         action = 'update'
     if now_local.date() == selected_date.date():

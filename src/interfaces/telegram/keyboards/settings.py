@@ -7,11 +7,11 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from .shared import _back_button
 
 
-def _next_tz_page_button(next_page: str):
+def _next_tz_page_button(next_page: int):
     return types.InlineKeyboardButton(text='Next', callback_data=f'timezones_page_{next_page}')
 
 
-def _prev_tz_page_button(prev_page: str):
+def _prev_tz_page_button(prev_page: int):
     return types.InlineKeyboardButton(text='Prev', callback_data=f'timezones_page_{prev_page}')
 
 

@@ -1,7 +1,5 @@
-import os
-
-from celery import Celery
-from celery.signals import worker_process_shutdown
+from celery import Celery  # type: ignore
+from celery.signals import worker_process_shutdown  # type: ignore
 from aiogram import Bot
 from dishka import make_container, Provider, provide, Scope, Container
 from dishka.integrations.celery import DishkaTask, setup_dishka
@@ -14,11 +12,11 @@ class BotProvider(Provider):
 
     @provide
     def bot_conf(self) -> BotConfig:
-        return BotConfig()
+        return BotConfig()  # type: ignore
 
     @provide
     def redis_conf(self) -> RedisConfig:
-        return RedisConfig()
+        return RedisConfig()  # type: ignore
 
     @provide
     def bot(self, conf: BotConfig) -> Bot:

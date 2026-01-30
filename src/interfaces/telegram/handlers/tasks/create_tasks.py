@@ -6,12 +6,14 @@ from aiogram3_calendar import simple_cal_callback, SimpleCalendar as calendar
 from dishka.integrations.aiogram import FromDishka
 
 from src.interfaces.telegram.keyboards.times import deadline_time_kb, kalendar_kb
+from src.interfaces.telegram.keyboards.shared import back_kb
 from src.interfaces.telegram.keyboards.shared import main_page_kb
 from src.interfaces.telegram.keyboards.tasks import under_task_info_kb
 from src.interfaces.telegram.states.task import CreateTaskStates
 from src.interfaces.presentators.task import show_task_data
 from src.application.interfaces.clients import BackendClientInterface
 from src.application.interfaces import StorageInterface
+from src.interfaces.telegram.handlers.errors import HandlerError
 
 
 create_task_router = Router(name='Create tasks')
@@ -71,9 +73,10 @@ async def ask_deadline_date(
     selected_local: datetime = date.replace(tzinfo=user_tz)
     now_local = datetime.now(timezone.utc).astimezone(user_tz)
     if selected_local.date() < now_local.date():
+        parent_id = await state.get_value("parent_id", None)
         return await cq.message.edit_text(
             f'<b>Deadline date cannot be earlier than today</b>',
-            reply_markup=await kalendar_kb(),
+            reply_markup=back_kb(f"get_task_{parent_id}") if parent_id else main_page_kb(),
             parse_mode="HTML"
         )
     await state.update_data(deadline=date.isoformat())
@@ -105,7 +108,10 @@ async def set_deadline_time(
         f"<b>Choosen deadline time is {'0'+deadline_hour if deadline_hour <= 9 else deadline_hour}h:00m</b>",
         parse_mode="HTML"
     )
-    created = await backend.create_task(cq.from_user.username, **data)
+    ok, created = await backend.create_task(cq.from_user.username, **data)
+    if not ok:
+        parent = data.get("parent_id")
+        raise HandlerError(created, kb=back_kb(f"get_task_{parent}" if parent else "main_page"))
     await cq.message.answer(
         show_task_data(created, user_tz),
         reply_markup=under_task_info_kb(created),

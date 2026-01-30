@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from aiogram import types, F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram3_calendar import SimpleCalendar as calendar, simple_cal_callback
+from aiogram3_calendar import SimpleCalendar as calendar, simple_cal_callback  # type: ignore
 
 # from src.interfaces.telegram.keyboards.tasks import for_task_update_kb, for_task_info_kb, kalendar_kb, deadline_time_kb, yes_or_no_kb
 # from src.application.interfaces.clients import TimezoneClientInterface, BackendClientInterface

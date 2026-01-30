@@ -2,7 +2,7 @@ import httpx
 
 from datetime import timezone, timedelta
 
-from application.interfaces.clients import TimezoneClientInterface
+from src.application.interfaces.clients import TimezoneClientInterface
 
 
 class HttpTZClient(TimezoneClientInterface):
