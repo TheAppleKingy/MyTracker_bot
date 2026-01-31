@@ -1,3 +1,3 @@
 from .auth import RegistrationStates
 from .settings import SetTZStates
-from .task import RemindTimeCountState, CreateTaskStates, UpdateTaskStates
+from .task import RemindState, CreateTaskStates, UpdateTaskStates

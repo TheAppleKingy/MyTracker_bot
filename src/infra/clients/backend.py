@@ -31,6 +31,18 @@ class URIs:
     def subtasks(self, parent_id: int):
         return self.task_info(parent_id) + "/subtasks"
 
+    def check_task_active(self, task_id: int):
+        return self.task_info(task_id) + "/is_active"
+
+    def finish_task(self, task_id: int):
+        return self.task_info(task_id) + "/finish"
+
+    def force_finish_task(self, task_id: int):
+        return self.finish_task(task_id) + "/force"
+
+    def get_parent_id(self, task_id: int):
+        return self.task_info(task_id) + "/parent"
+
 
 class HttpBackendClient(BackendClientInterface):
     def __init__(
@@ -139,4 +151,35 @@ class HttpBackendClient(BackendClientInterface):
 
     async def delete_task(self, tg_name: str, task_id: int) -> BackendResponse[None]:
         resp = await self._auth_client(tg_name).delete(self._uris.task_info(task_id))
+        return self._handle_response(resp)
+
+    async def update_task(
+        self,
+        tg_name: str,
+        task_id: int,
+        title: Optional[str] = None,
+        description: Optional[str] = None,
+        deadline: Optional[datetime] = None
+    ) -> BackendResponse[TaskPreview]:
+        data = {}
+        if title:
+            data["title"] = title
+        if description:
+            data["description"] = description
+        if deadline:
+            data["deadline"] = deadline.isoformat()
+        resp = await self._auth_client(tg_name).patch(self._uris.task_info(task_id), json=data)
+        ok, data = self._handle_response(resp)
+        return ok, Task(**TaskViewSchema.model_validate(data).model_dump()) if ok else data
+
+    async def finish_task(self, tg_name: int, task_id: int) -> BackendResponse[None]:
+        resp = await self._auth_client(tg_name).patch(self._uris.finish_task(task_id))
+        return self._handle_response(resp)
+
+    async def force_finish_task(self, tg_name: int, task_id: int) -> BackendResponse[None]:
+        resp = await self._auth_client(tg_name).patch(self._uris.force_finish_task(task_id))
+        return self._handle_response(resp)
+
+    async def check_task_active(self, tg_name: str, task_id: int) -> BackendResponse[bool]:
+        resp = await self._auth_client(tg_name).get(self._uris.check_task_active(task_id))
         return self._handle_response(resp)

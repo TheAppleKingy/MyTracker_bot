@@ -10,7 +10,9 @@ from src.interfaces.telegram.keyboards.shared import back_kb
 from src.application.interfaces.clients import BackendClientInterface
 from src.application.interfaces import StorageInterface
 from src.application.interfaces.services import NotifyServiceInterface
-
+from src.interfaces.telegram.states import RemindState
+from src.interfaces.telegram.handlers.errors import HandlerError
+from src.interfaces.presentators.time import show_timedelta_verbose
 
 reminder_router = Router(name="Reminder")
 
@@ -25,21 +27,21 @@ async def add_reminder(
     await cq.answer()
     await state.clear()
     task_id = int(cq.data.split('_')[-1])   # type: ignore
-    _, task = await backend.get_task(cq.from_user.username, task_id)   # type: ignore
     user_tz = await storage.get_tz(cq.from_user.username)   # type: ignore
-    await state.update_data(
-        task_id=task.id,  # type: ignore
-        task_deadline_local=task.deadline.astimezone(user_tz).isoformat(),  # type: ignore
-        task_title=task.title  # type: ignore
-    )
     now_local = datetime.now(timezone.utc).astimezone(user_tz)
+    ok, res = await backend.get_task(cq.from_user.username, task_id)
+    if not ok:
+        raise HandlerError(res, kb=back_kb(f"main_page"))
+    await state.set_state(RemindState.waiting_remind_date)
+    await state.update_data(deadline=res.deadline.isoformat(), task_id=task_id, task_title=res.title)
     return await cq.message.answer(  # type: ignore
-        text="Choose remind date",
-        reply_markup=await kalendar_kb(now_local.year, now_local.month)
+        text="<b>Choose remind date</b>",
+        reply_markup=await kalendar_kb(now_local.year, now_local.month),
+        parse_mode="HTML"
     )
 
 
-@reminder_router.callback_query(simple_cal_callback.filter())
+@reminder_router.callback_query(simple_cal_callback.filter(), RemindState.waiting_remind_date)
 async def ask_remind_date(
     cq: types.CallbackQuery,
     callback_data: simple_cal_callback,
@@ -53,18 +55,18 @@ async def ask_remind_date(
         return
     data = await state.get_data()
     user_tz = await storage.get_tz(cq.from_user.username)
-    current_deadline_local = datetime.fromisoformat(data.get("task_deadline_local"))
+    current_deadline_local = datetime.fromisoformat(data["deadline"]).astimezone(user_tz)
     selected_local: datetime = date.replace(tzinfo=user_tz)
     now_local = datetime.now(timezone.utc).astimezone(user_tz)
     if current_deadline_local < selected_local:
         return await cq.message.edit_text(
             f"<b>Cannot set reminder after deadline day</b>",
-            reply_markup=await kalendar_kb(), parse_mode='HTML'
+            reply_markup=await kalendar_kb(now_local.year, now_local.month), parse_mode='HTML'
         )
     if now_local.date() > selected_local.date():
         return await cq.message.edit_text(
             f"<b>Cannot set reminder earlier than today</b>",
-            reply_markup=await kalendar_kb(), parse_mode='HTML'
+            reply_markup=await kalendar_kb(now_local.year, now_local.month), parse_mode='HTML'
         )
     await state.update_data(remind_date=date.isoformat())
     remained_time = current_deadline_local - now_local
@@ -72,11 +74,19 @@ async def ask_remind_date(
         await state.clear()
         return await cq.message.answer(
             "<b>Deadline over less than a 10 seconds!</b>",
-            reply_markup=back_kb(f"get_task_{data.get("task_id")}"),
+            reply_markup=back_kb(f"get_task_{data["task_id"]}"),
             parse_mode='HTML'
         )
-    await cq.message.edit_text(f'Choosen date for remind is {selected_local.strftime('%d.%m.%Y')}')
-    return await cq.message.answer("Choose time", reply_markup=remind_time_kb(current_deadline_local, date))
+    await cq.message.edit_text(
+        text=f'<b>Choosen date for remind is {selected_local.strftime('%d.%m.%Y')}</b>',
+        reply_markup=None,
+        parse_mode="HTML"
+    )
+    return await cq.message.answer(
+        text="<b>Choose time</b>",
+        reply_markup=remind_time_kb(current_deadline_local, date),
+        parse_mode="HTML"
+    )
 
 
 @reminder_router.callback_query(F.data.startswith('set_remind_hour_'))
@@ -87,20 +97,30 @@ async def set_remind_hour(
     notify_service: FromDishka[NotifyServiceInterface]
 ):
     await cq.answer()
-    remind_hour = int(cq.data.split('_')[-1])
+    suf = cq.data.split("_")[-1]
+    if suf == "manually":
+        await state.set_state(RemindState.waiting_remind_time)
+        msg = await cq.message.edit_text(
+            text=f"<b>Enter time in format HH:MM</b>",
+            reply_markup=None,
+            parse_mode="HTML"
+        )
+        await state.update_data(last_message=msg.message_id)
+        return
     data = await state.get_data()
+    hour = int(suf)
     user_tz = storage.get_tz(cq.from_user.username)
     remind_datetime_utc = datetime.fromisoformat(data.get('remind_date')).replace(
-        hour=remind_hour, tzinfo=user_tz).astimezone(timezone.utc)
-    current_deadline_local = datetime.fromisoformat(data.get("task_deadline_local"))
+        hour=hour, tzinfo=user_tz).astimezone(timezone.utc)
+    current_deadline_local = datetime.fromisoformat(data["deadline"]).astimezone(user_tz)
     remained_time = current_deadline_local.astimezone(timezone.utc) - remind_datetime_utc
-    remained_time_str = ''
-    if remained_time.days >= 1:
-        remained_time_str += f'{remained_time.days}d {remained_time.seconds // 3600 - 24*remained_time.days}h'
-    else:
-        remained_time_str += f'{remained_time.seconds//3600} hours'
-    msg = f'Task "{data.get("task_title")}..." is waiting! Deadline over ' + remained_time
+    remained_time_str = show_timedelta_verbose(remained_time)
+    msg = f'<b>Task "{data.get["task_title"]}" is waiting! Deadline over ' + remained_time_str + "</b>"
     notify_service.send_notify(msg, cq.message.chat.id, remind_datetime_utc)
     await state.clear()
-    await cq.message.edit_text(f'Chosen time for remind is {'0'+str(remind_hour) if remind_hour <= 9 else remind_hour}h:00m', reply_markup=None)
-    await cq.message.answer("Done!", reply_markup=back_kb(f"get_task_{data.get("task_id")}"))
+    await cq.message.edit_text(
+        text=f'<b>Chosen time for remind is {'0'+str(hour) if hour <= 9 else hour}h:00m</b>',
+        reply_markup=None,
+        parse_mode="HTML"
+    )
+    await cq.message.answer("<b>Done!</b>", reply_markup=back_kb(f"get_task_{data["task_id"]}"))

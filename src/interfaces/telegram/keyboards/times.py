@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from typing import Optional, Literal
 from datetime import datetime, timezone
 
@@ -30,6 +31,7 @@ def time_kb(
     ]
     for i in range(0, len(buttons), 4):
         builder.row(*buttons[i:i+4])
+    builder.row(types.InlineKeyboardButton(text="Enter manually", callback_data=f"{action}_{time_of}_hour_manually"))
     return builder.as_markup()
 
 

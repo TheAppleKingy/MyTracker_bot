@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from aiogram import types, F, Router
+from aiogram import types, F, Router, Bot
 from aiogram.fsm.context import FSMContext
 from aiogram3_calendar import simple_cal_callback, SimpleCalendar as calendar
 from dishka.integrations.aiogram import FromDishka
@@ -41,14 +41,12 @@ async def check_tz(
     storage: FromDishka[StorageInterface]
 ):
     await state.update_data({'description': message.text})
-    await state.set_state(CreateTaskStates.waiting_deadline)
+    await state.set_state(CreateTaskStates.waiting_deadline_date)
     user_tz = await storage.get_tz(message.from_user.username)
     if not user_tz:
-        await state.clear()
-        return await message.answer(
-            "<b>You have to define your timezone in settings</b>",
-            reply_markup=main_page_kb(),
-            parse_mode="HTML"
+        raise HandlerError(
+            "You have to define your timezone in settings",
+            kb=main_page_kb()
         )
     now_local = datetime.now(timezone.utc).astimezone(user_tz)
     return await message.answer(
@@ -58,7 +56,7 @@ async def check_tz(
     )
 
 
-@create_task_router.callback_query(simple_cal_callback.filter(), CreateTaskStates.waiting_deadline)
+@create_task_router.callback_query(simple_cal_callback.filter(), CreateTaskStates.waiting_deadline_date)
 async def ask_deadline_date(
     cq: types.CallbackQuery,
     callback_data: simple_cal_callback,
@@ -73,19 +71,22 @@ async def ask_deadline_date(
     selected_local: datetime = date.replace(tzinfo=user_tz)
     now_local = datetime.now(timezone.utc).astimezone(user_tz)
     if selected_local.date() < now_local.date():
-        parent_id = await state.get_value("parent_id", None)
         return await cq.message.edit_text(
-            f'<b>Deadline date cannot be earlier than today</b>',
-            reply_markup=back_kb(f"get_task_{parent_id}") if parent_id else main_page_kb(),
+            text='<b>Deadline date cannot be earlier than today</b>',
+            reply_markup=await kalendar_kb(now_local.year, now_local.month),
             parse_mode="HTML"
         )
-    await state.update_data(deadline=date.isoformat())
+    await state.update_data(deadline=selected_local.isoformat())
     await cq.message.edit_text(
         f"<b>Choosen deadline date is {selected_local.strftime('%d.%m.%Y')}</b>",
         reply_markup=None,
         parse_mode="HTML"
     )
-    return await cq.message.answer("Select deadline time", reply_markup=deadline_time_kb(user_tz, date))
+    return await cq.message.answer(
+        text="<b>Select deadline time</b>",
+        reply_markup=deadline_time_kb(user_tz, date),
+        parse_mode="HTML"
+    )
 
 
 @create_task_router.callback_query(F.data.startswith('set_deadline_hour_'))
@@ -95,27 +96,67 @@ async def set_deadline_time(
     storage: FromDishka[StorageInterface],
     backend: FromDishka[BackendClientInterface]
 ):
-    await cq.message.edit_reply_markup(reply_markup=None)
-    deadline_hour = int(cq.data.split('_')[-1])
+    suf = cq.data.split("_")[-1]
+    if suf == "manually":
+        await state.set_state(CreateTaskStates.waiting_deadline_time)
+        msg = await cq.message.edit_text(
+            text=f"<b>Enter time in format HH:MM</b>",
+            reply_markup=None,
+            parse_mode="HTML"
+        )
+        await state.update_data(last_message=msg.message_id)
+        return
+    hour = int(suf)
     data = await state.get_data()
     await state.clear()
     user_tz = await storage.get_tz(cq.from_user.username)
-    deadline = datetime.fromisoformat(data.get('deadline')).replace(
-        hour=deadline_hour, tzinfo=user_tz)
-    data.update({'deadline': deadline})
-    data.pop('rollback_msg', None)
+    data["deadline"] = datetime.fromisoformat(data['deadline']).replace(hour=hour)
     await cq.message.edit_text(
-        f"<b>Choosen deadline time is {'0'+deadline_hour if deadline_hour <= 9 else deadline_hour}h:00m</b>",
+        f"<b>Choosen deadline time is {'0' + hour if hour <= 9 else hour}h:00m</b>",
+        reply_markup=None,
         parse_mode="HTML"
     )
-    ok, created = await backend.create_task(cq.from_user.username, **data)
+    ok, res = await backend.create_task(cq.from_user.username, **data)
     if not ok:
-        parent = data.get("parent_id")
-        raise HandlerError(created, kb=back_kb(f"get_task_{parent}" if parent else "main_page"))
-    await cq.message.answer(
-        show_task_data(created, user_tz),
-        reply_markup=under_task_info_kb(created),
-        parse_mode='HTML'
+        raise HandlerError(res, kb=back_kb(f"get_task_{data["parent_id"] if data.get("parent_id") else "main_page"}"))
+    return await cq.message.answer(
+        text=show_task_data(res, user_tz),
+        reply_markup=under_task_info_kb(res),
+        parse_mode="HTML"
+    )
+
+
+@create_task_router.message(CreateTaskStates.waiting_deadline_time)
+async def set_task_deadline_manually(
+    message: types.Message,
+    state: FSMContext,
+    backend: FromDishka[BackendClientInterface],
+    bot: FromDishka[Bot]
+):
+    try:
+        new_time = datetime.strptime(message.text, "%H:%M").time()
+    except ValueError:
+        raise HandlerError("Invalid time format. Try again", clear_state=False)
+    data = await state.get_data()
+    await state.clear()
+    data["deadline"] = datetime.fromisoformat(data['deadline']).replace(hour=new_time.hour, minute=new_time.minute)
+    now_local = datetime.now(timezone.utc).astimezone(data["deadline"].tzinfo)
+    if now_local > data["deadline"]:
+        raise HandlerError("Deadline time cannot be earlier than now", clear_state=False)
+    await bot.edit_message_text(
+        chat_id=message.chat.id,
+        message_id=data.pop("last_message"),
+        text=f"<b>Choosen deadline time is {new_time.strftime("%Hh:%Mm")}</b>",
+        reply_markup=None,
+        parse_mode="HTML"
+    )
+    ok, res = await backend.create_task(message.from_user.username, **data)
+    if not ok:
+        raise HandlerError(res, kb=back_kb(f"get_task_{data["parent_id"] if data.get("parent_id") else "main_page"}"))
+    return await message.answer(
+        text=show_task_data(res, data["deadline"].tzinfo),
+        reply_markup=under_task_info_kb(res),
+        parse_mode="HTML"
     )
 
 

@@ -6,6 +6,7 @@ from dishka.integrations.aiogram import setup_dishka
 
 from src.interfaces.telegram.handlers import *
 from src.container import container
+from src.logger import logger
 
 
 async def setup():
@@ -24,6 +25,7 @@ async def setup():
     setup_dishka(container, dispatcher, auto_inject=True)
     bot = await container.get(Bot)
     await dispatcher.start_polling(bot)
+    logger.info("Tracker bot started...")
 
 
 def start():
