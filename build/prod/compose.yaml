@@ -30,12 +30,28 @@ services:
       dockerfile: build/prod/Dockerfile
     env_file:
       - .env
-    command: celery -A src.celery_app.celery_app worker --loglevel=info
+    command: celery -A src.celery_app.celery_app worker --loglevel=info --events
     depends_on:
       - bot_redis
     networks:
       - MyTrackerNetwork
       - bot_network
+
+  bot_flower:
+    build:  
+      context: ../../
+      dockerfile: build/dev/Dockerfile
+    env_file:
+      - .env
+    command: celery -A src.celery_app.celery_app flower --basic_auth=${FLOWER_USER}:${FLOWER_PASSWORD}
+    volumes:
+      - ../../src:/app/src
+    depends_on:
+      - bot_worker
+    networks:
+      - bot_network
+    ports:
+      - "5555:5555"
 
 volumes:
   bot_redis_data:
