@@ -4,7 +4,7 @@ import watchfiles
 from aiogram import Bot, Dispatcher
 from dishka.integrations.aiogram import setup_dishka
 
-from src.interfaces.telegram.handlers import *
+from src.interfaces.handlers.telegram import *
 from src.container import container
 from src.logger import logger
 

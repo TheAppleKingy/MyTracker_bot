@@ -4,7 +4,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, TelegramObject
 from aiogram.fsm.context import FSMContext
 
-from src.interfaces.telegram.handlers.errors import HandlerError
+from src.interfaces.handlers.telegram.errors import HandlerError
 from src.logger import logger
 
 
@@ -27,7 +27,11 @@ class HandleErrorMiddleware(BaseMiddleware):
         except HandlerError as e:
             if e.clear_state:
                 await _clear_state(data)
-            return await answer(text=f"<b>{str(e)}</b>", reply_markup=e.kb, parse_mode="HTML")
+            res = await answer(text=f"<b>{str(e)}</b>", reply_markup=e.kb, parse_mode="HTML")
+            if e.add_last_message:
+                state = data.get("state")
+                await state.update_data(last_message=res.message_id)
+            return
         except Exception as e:
             await _clear_state(data)
             logger.exception(f"{e}")

@@ -1,7 +1,7 @@
 from aiogram import types, Router, F
 from aiogram.fsm.context import FSMContext
 
-from src.interfaces.telegram.keyboards.settings import settings_list_kb
+from src.interfaces.presentators.telegram.keyboards.settings import settings_list_kb
 
 settings_router = Router(name='Settings')
 

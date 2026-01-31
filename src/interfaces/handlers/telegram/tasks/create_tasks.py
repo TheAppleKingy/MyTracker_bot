@@ -5,15 +5,17 @@ from aiogram.fsm.context import FSMContext
 from aiogram3_calendar import simple_cal_callback, SimpleCalendar as calendar
 from dishka.integrations.aiogram import FromDishka
 
-from src.interfaces.telegram.keyboards.times import deadline_time_kb, kalendar_kb
-from src.interfaces.telegram.keyboards.shared import back_kb
-from src.interfaces.telegram.keyboards.shared import main_page_kb
-from src.interfaces.telegram.keyboards.tasks import under_task_info_kb
-from src.interfaces.telegram.states.task import CreateTaskStates
+from src.interfaces.presentators.telegram.keyboards.times import deadline_time_kb, kalendar_kb
+from src.interfaces.presentators.telegram.keyboards.shared import back_kb
+from src.interfaces.presentators.telegram.keyboards.shared import main_page_kb
+from src.interfaces.presentators.telegram.keyboards.tasks import under_task_info_kb
+from src.interfaces.handlers.telegram.states.task import CreateTaskStates
+from src.interfaces.adapters.time import validate_time
 from src.interfaces.presentators.task import show_task_data
 from src.application.interfaces.clients import BackendClientInterface
 from src.application.interfaces import StorageInterface
-from src.interfaces.telegram.handlers.errors import HandlerError
+from src.interfaces.handlers.telegram.errors import HandlerError
+from src.logger import logger
 
 
 create_task_router = Router(name='Create tasks')
@@ -133,20 +135,19 @@ async def set_task_deadline_manually(
     backend: FromDishka[BackendClientInterface],
     bot: FromDishka[Bot]
 ):
-    try:
-        new_time = datetime.strptime(message.text, "%H:%M").time()
-    except ValueError:
-        raise HandlerError("Invalid time format. Try again", clear_state=False)
+    logger.critical(f"{await state.get_state()}")
+    deadline_time = validate_time(message.text)
     data = await state.get_data()
-    await state.clear()
-    data["deadline"] = datetime.fromisoformat(data['deadline']).replace(hour=new_time.hour, minute=new_time.minute)
+    data["deadline"] = datetime.fromisoformat(data['deadline']).replace(
+        hour=deadline_time.hour, minute=deadline_time.minute)
     now_local = datetime.now(timezone.utc).astimezone(data["deadline"].tzinfo)
     if now_local > data["deadline"]:
-        raise HandlerError("Deadline time cannot be earlier than now", clear_state=False)
+        raise HandlerError("Deadline time cannot be earlier than now", clear_state=False, add_last_message=True)
+    await state.clear()
     await bot.edit_message_text(
         chat_id=message.chat.id,
         message_id=data.pop("last_message"),
-        text=f"<b>Choosen deadline time is {new_time.strftime("%Hh:%Mm")}</b>",
+        text=f"<b>Choosen deadline time is {deadline_time.strftime("%Hh:%Mm")}</b>",
         reply_markup=None,
         parse_mode="HTML"
     )

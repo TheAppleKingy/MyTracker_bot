@@ -4,9 +4,10 @@ from dishka.integrations.aiogram import FromDishka
 
 from src.application.interfaces.clients import CountryClientInterface, TimezoneClientInterface
 from src.application.interfaces import StorageInterface
-from src.interfaces.telegram.states.settings import SetTZStates
-from src.interfaces.telegram.keyboards.settings import timezones_page_kb
-from src.interfaces.telegram.keyboards.shared import main_page_kb, back_kb
+from src.interfaces.handlers.telegram.states.settings import SetTZStates
+from src.interfaces.presentators.telegram.keyboards.settings import timezones_page_kb
+from src.interfaces.presentators.telegram.keyboards.shared import back_kb
+from src.interfaces.handlers.telegram.errors import HandlerError
 from src.logger import logger
 
 tz_router = Router(name="Set timezone")
@@ -32,16 +33,18 @@ async def search_tzinfo_by_country(
 ):
     country_code = country_client.get_country_code_by_name(message.text)
     if not country_code:
-        return await message.answer(text="Enter valid country name", reply_markup=None)
+        raise HandlerError("Enter valid country name", clear_state=False)
     offsets = await tz_client.get_country_tz_offsets_minutes(country_code)
     if not offsets:
-        await state.clear()
-        return await message.answer(
-            text="Timezones not found. Try again or write to support",
-            reply_markup=back_kb("settings")
+        raise HandlerError(
+            "Timezones not found. Try again or write to support",
+            kb=back_kb("settings")
         )
     await state.update_data(offsets=offsets)
-    await message.answer("Select your timezone", reply_markup=timezones_page_kb(1, 5, offsets))
+    await message.answer(
+        text="<b>Select your timezone</b>",
+        reply_markup=timezones_page_kb(1, 5, offsets)
+    )
 
 
 @tz_router.callback_query(F.data.startswith("timezones_page_"))
@@ -67,6 +70,7 @@ async def set_user_tz(
     await storage.set_tz(cq.from_user.username, choosen_offset)
     await state.clear()
     return await cq.message.edit_text(
-        text=f"Choosen timezone {presented}",
-        reply_markup=back_kb("settings")
+        text=f"<b>Choosen timezone {presented}</b>",
+        reply_markup=back_kb("settings"),
+        parse_mode="HTML"
     )

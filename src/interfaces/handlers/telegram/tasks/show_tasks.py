@@ -4,11 +4,11 @@ from dishka.integrations.aiogram import FromDishka
 
 from src.application.interfaces.clients import BackendClientInterface
 from src.application.interfaces import StorageInterface
-from src.interfaces.telegram.keyboards.tasks import under_task_info_kb, no_tasks_kb, page_tasks_kb, no_subtasks_kb
-from src.interfaces.telegram.keyboards.shared import main_page_kb, back_kb
+from src.interfaces.presentators.telegram.keyboards.tasks import under_task_info_kb, no_tasks_kb, page_tasks_kb, no_subtasks_kb
+from src.interfaces.presentators.telegram.keyboards.shared import main_page_kb, back_kb
 from src.interfaces.presentators.task import show_task_data
 from src.logger import logger
-from src.interfaces.telegram.handlers.errors import HandlerError
+from src.interfaces.handlers.telegram.errors import HandlerError
 
 show_task_router = Router(name='Show tasks')
 

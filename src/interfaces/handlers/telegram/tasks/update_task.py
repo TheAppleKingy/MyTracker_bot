@@ -5,14 +5,15 @@ from aiogram.fsm.context import FSMContext
 from aiogram3_calendar import SimpleCalendar as calendar, simple_cal_callback  # type: ignore
 from dishka.integrations.aiogram import FromDishka
 
-from src.interfaces.telegram.keyboards.tasks import update_task_terms_kb, under_task_info_kb
-from src.interfaces.telegram.keyboards.times import kalendar_kb, deadline_time_kb
-from src.interfaces.telegram.keyboards.shared import back_kb, yes_or_no_kb
+from src.interfaces.presentators.telegram.keyboards.tasks import update_task_terms_kb, under_task_info_kb
+from src.interfaces.presentators.telegram.keyboards.times import kalendar_kb, deadline_time_kb
+from src.interfaces.presentators.telegram.keyboards.shared import back_kb, yes_or_no_kb
 from src.interfaces.presentators.task import show_task_data
-from src.application.interfaces.clients import TimezoneClientInterface, BackendClientInterface
+from src.interfaces.adapters.time import validate_time
+from src.application.interfaces.clients import BackendClientInterface
 from src.application.interfaces import StorageInterface
-from src.interfaces.telegram.states import UpdateTaskStates
-from src.interfaces.telegram.handlers.errors import HandlerError
+from src.interfaces.handlers.telegram.states import UpdateTaskStates
+from src.interfaces.handlers.telegram.errors import HandlerError
 
 
 update_task_router = Router(name='Update tasks')
@@ -98,7 +99,7 @@ async def ask_enter_new_deadline_time(
             reply_markup=await kalendar_kb(now_local.year, now_local.month),
             parse_mode='HTML'
         )
-    await state.update_data(deadline=date.isoformat())
+    await state.update_data(deadline=selected_local.isoformat())
     await cq.message.edit_text(
         text=f"<b>Choosen new deadline date is {selected_local.strftime('%d.%m.%Y')}</b>",
         reply_markup=None,
@@ -115,7 +116,6 @@ async def ask_enter_new_deadline_time(
 async def change_task_deadline(
     cq: types.CallbackQuery,
     state: FSMContext,
-    storage: FromDishka[StorageInterface],
     backend: FromDishka[BackendClientInterface]
 ):
     suf = cq.data.split("_")[-1]
@@ -131,9 +131,7 @@ async def change_task_deadline(
     hour = int(suf)
     data = await state.get_data()
     await state.clear()
-    user_tz = await storage.get_tz(cq.from_user.username)
-    new_deadline = datetime.fromisoformat(data['deadline']).replace(
-        hour=hour, tzinfo=user_tz)
+    new_deadline = datetime.fromisoformat(data['deadline']).replace(hour=hour)
     await cq.message.edit_text(
         f"<b>Choosen new deadline time is {new_deadline.strftime("%Hh:%Mm")}</b>",
         reply_markup=None,
@@ -143,7 +141,7 @@ async def change_task_deadline(
     if not ok:
         raise HandlerError(res, kb=back_kb(f"get_task_{data["updating_task"]}"))
     return await cq.message.answer(
-        text=show_task_data(res, user_tz),
+        text=show_task_data(res, new_deadline.tzinfo),
         reply_markup=under_task_info_kb(res),
         parse_mode="HTML"
     )
@@ -153,21 +151,16 @@ async def change_task_deadline(
 async def change_task_deadline_manually(
     message: types.Message,
     state: FSMContext,
-    storage: FromDishka[StorageInterface],
     backend: FromDishka[BackendClientInterface],
     bot: FromDishka[Bot]
 ):
-    try:
-        new_time = datetime.strptime(message.text, "%H:%M").time()
-    except ValueError:
-        raise HandlerError("Invalid time format. Try again", clear_state=False)
+    new_time = validate_time(message.text)
     data = await state.get_data()
-    user_tz = await storage.get_tz(message.from_user.username)
     new_deadline = datetime.fromisoformat(data['deadline']).replace(
-        hour=new_time.hour, minute=new_time.minute, tzinfo=user_tz)
-    now_local = datetime.now(timezone.utc).astimezone(user_tz)
+        hour=new_time.hour, minute=new_time.minute)
+    now_local = datetime.now(timezone.utc).astimezone(new_deadline.tzinfo)
     if now_local > new_deadline:
-        raise HandlerError("New deadline time cannot be earlier than now", clear_state=False)
+        raise HandlerError("New deadline time cannot be earlier than now", clear_state=False, add_last_message=True)
     await state.clear()
     await bot.edit_message_text(
         chat_id=message.chat.id,
@@ -180,7 +173,7 @@ async def change_task_deadline_manually(
     if not ok:
         raise HandlerError(res, kb=back_kb(f"get_task_{data["updating_task"]}"))
     return await message.answer(
-        text=show_task_data(res, user_tz),
+        text=show_task_data(res, new_deadline.tzinfo),
         reply_markup=under_task_info_kb(res),
         parse_mode="HTML"
     )

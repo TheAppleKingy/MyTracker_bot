@@ -2,9 +2,10 @@ from aiogram import types, F, Router
 from aiogram.fsm.context import FSMContext
 from dishka.integrations.aiogram import FromDishka
 
-from src.interfaces.telegram.keyboards.shared import back_kb, main_page_kb, yes_or_no_kb
+from src.interfaces.presentators.telegram.keyboards.shared import back_kb, main_page_kb, yes_or_no_kb
 from src.application.interfaces.clients import BackendClientInterface
-from src.interfaces.telegram.handlers.errors import HandlerError
+from src.interfaces.handlers.telegram.errors import HandlerError
+from src.logger import logger
 
 delete_task_router = Router(name='Delete tasks')
 
@@ -20,7 +21,10 @@ async def delete_task(
     data = cq.data.split("_")[2:]
     task_id = int(data[0])
     parent_id: int | None = eval(data[1])
-    status = "active" if await backend.check_task_active(cq.from_user.username, task_id) else "finished"
+    ok, is_active = await backend.check_task_active(cq.from_user.username, task_id)
+    if not ok:
+        raise HandlerError(is_active, kb=main_page_kb())
+    status = "active" if is_active else "finished"
     await state.update_data(task_id=task_id, parent_id=parent_id, deleted_status=status)
     return await cq.message.answer(
         text=f"<b>Are you sure? All subtasks will be deleted too</b>",

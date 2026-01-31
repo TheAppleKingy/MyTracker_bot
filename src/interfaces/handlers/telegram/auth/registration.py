@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from dishka.integrations.aiogram import FromDishka
 
 from src.application.interfaces.clients import BackendClientInterface
-from src.interfaces.telegram.keyboards.shared import main_page_kb
+from src.interfaces.presentators.telegram.keyboards.shared import main_page_kb
 from src.logger import logger
 
 registration_router = Router(name="Registration")

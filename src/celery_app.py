@@ -31,7 +31,7 @@ def get_celery():
     conf = container.get(RedisConfig)
     celery.conf.broker_url = conf.conn_url
     celery.conf.result_backend = conf.conn_url
-    celery.autodiscover_tasks(['src.infra.tasks'])
+    celery.autodiscover_tasks(['src.infra.tasks.notify'])
     setup_dishka(container, celery)
     return celery
 

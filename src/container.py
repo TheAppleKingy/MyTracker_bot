@@ -11,7 +11,7 @@ from src.infra.clients import *
 from src.infra.configs import RedisConfig, BotConfig
 from src.infra.services import *
 from src.infra.redis_storage import RedisBotStorage
-from src.interfaces.telegram.handlers.middleware import HandleErrorMiddleware
+from src.interfaces.handlers.telegram.middleware import HandleErrorMiddleware
 
 
 class ClientsProvider(Provider):
