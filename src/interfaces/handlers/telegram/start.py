@@ -14,21 +14,21 @@ start_router = Router(name='Start')
 
 
 @start_router.message(CommandStart())
-async def cmd_start(message: types.Message, state: FSMContext,  backend: FromDishka[BackendClientInterface]):
-    await state.clear()
-    ok, registered = await backend.check_registered(message.from_user.username)  # type: ignore
+async def cmd_start(event: types.Message, context: FSMContext,  backend: FromDishka[BackendClientInterface]):
+    await context.clear()
+    ok, registered = await backend.check_registered(event.from_user.username)  # type: ignore
     if not ok:
         raise HandlerError("Service unaccessible. Try later")
     if not registered:
-        return await message.answer(f"<b>Hello! Register in service</b>", reply_markup=register_kb(), parse_mode="HTML")
-    return await message.answer(f"<b>Hello there!</b>", reply_markup=main_kb(), parse_mode="HTML")
+        return await event.answer(f"<b>Hello! Register in service</b>", reply_markup=register_kb(), parse_mode="HTML")
+    return await event.answer(f"<b>Hello there!</b>", reply_markup=main_kb(), parse_mode="HTML")
 
 
 @start_router.callback_query(F.data == "main_page")
-async def main(cq: types.CallbackQuery, state: FSMContext):
-    await cq.answer()
-    await state.clear()
-    return await cq.message.answer(   # type: ignore
+async def main(event: types.CallbackQuery, context: FSMContext):
+    await event.answer()
+    await context.clear()
+    return await event.message.answer(   # type: ignore
         text=f"<b>Choose term</b>",
         reply_markup=main_kb(),
         parse_mode="HTML"

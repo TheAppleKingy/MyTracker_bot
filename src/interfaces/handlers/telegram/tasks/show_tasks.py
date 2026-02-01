@@ -15,23 +15,23 @@ show_task_router = Router(name='Show tasks')
 
 @show_task_router.callback_query(F.data.startswith('get_tasks_'))
 async def tasks_page(
-    cq: types.CallbackQuery,
-    state: FSMContext,
+    event: types.CallbackQuery,
+    context: FSMContext,
     backend: FromDishka[BackendClientInterface]
 ):
-    await cq.answer()
-    data = cq.data.split("_")[2:]
+    await event.answer()
+    data = event.data.split("_")[2:]
     status, page = data[0], int(data[1])
     if data[-1] == "fromnavigation":
-        answer = cq.message.edit_text
+        answer = event.message.edit_text
     else:
-        answer = cq.message.answer
-    ok, resp = await backend.get_tasks(cq.from_user.username, status, page=page)
+        answer = event.message.answer
+    ok, resp = await backend.get_tasks(event.from_user.username, status, page=page)
     if not ok:
         return HandlerError(resp, kb=main_page_kb())
     prev, next_, tasks = resp
     if not tasks:
-        return await cq.message.answer(
+        return await event.message.answer(
             text=f"<b>You have no {status} tasks</b>",
             parse_mode="HTML",
             reply_markup=no_tasks_kb()
@@ -45,23 +45,23 @@ async def tasks_page(
 
 @show_task_router.callback_query(F.data.startswith("get_subtasks_"))
 async def subtasks_page(
-    cq: types.CallbackQuery,
-    state: FSMContext,
+    event: types.CallbackQuery,
+    context: FSMContext,
     backend: FromDishka[BackendClientInterface],
 ):
-    await cq.answer()
-    data = cq.data.split("_")[2:]
+    await event.answer()
+    data = event.data.split("_")[2:]
     status, parent_id, page = data[0], int(data[1]), int(data[2])
     if data[-1] == "fromnavigation":
-        answer = cq.message.edit_text
+        answer = event.message.edit_text
     else:
-        answer = cq.message.answer
-    ok, resp = await backend.get_subtasks(cq.from_user.username, status, parent_id, page=page)
+        answer = event.message.answer
+    ok, resp = await backend.get_subtasks(event.from_user.username, status, parent_id, page=page)
     if not ok:
         raise HandlerError(resp, kb=back_kb(f"get_task_{parent_id}"))
     prev, next_, tasks = resp
     if not tasks:
-        return await cq.message.answer(
+        return await event.message.answer(
             text=f"<b>You have no {status} subtasks</b>",
             parse_mode="HTML",
             reply_markup=no_subtasks_kb(parent_id)
@@ -75,19 +75,19 @@ async def subtasks_page(
 
 @show_task_router.callback_query(F.data.startswith('get_task_'))
 async def task_info(
-    cq: types.CallbackQuery,
-    state: FSMContext,
+    event: types.CallbackQuery,
+    context: FSMContext,
     backend: FromDishka[BackendClientInterface],
     storage: FromDishka[StorageInterface]
 ):
-    await cq.answer()
-    await state.clear()
-    task_id = int(cq.data.split('_')[-1])
-    ok, task = await backend.get_task(cq.from_user.username, task_id)
+    await event.answer()
+    await context.clear()
+    task_id = int(event.data.split('_')[-1])
+    ok, task = await backend.get_task(event.from_user.username, task_id)
     if not ok:
         raise HandlerError(task, kb=main_page_kb())
-    user_tz = await storage.get_tz(cq.from_user.username)
-    return await cq.message.answer(
+    user_tz = await storage.get_tz(event.from_user.username)
+    return await event.message.answer(
         text=show_task_data(task, user_tz),
         reply_markup=under_task_info_kb(task),
         parse_mode='HTML'
