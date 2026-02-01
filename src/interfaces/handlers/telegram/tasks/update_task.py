@@ -107,7 +107,7 @@ async def ask_enter_new_deadline_time(
     )
     return await event.message.answer(
         text="<b>Select new deadline time</b>",
-        reply_markup=deadline_time_kb(user_tz, date, for_update=True),
+        reply_markup=deadline_time_kb(selected_local, for_update=True),
         parse_mode="HTML"
     )
 
