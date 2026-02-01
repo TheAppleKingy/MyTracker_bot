@@ -17,21 +17,22 @@ Before running the bot, define the following environment variables:
 
 | Variable              | Description                                                                  |
 |-----------------------|------------------------------------------------------------------------------|
-| `CELERY_WORKERS`      | Number of CPU cores Celery can use                                           |
-| `CELERY_BROKER_URL`   | Usually the same as `REDIS_URL`                                              |
-| `REDIS_URL`           | Redis connection URL                                                         |
 | `REDIS_PASSWORD`      | Redis password                                                               |
+| `REDIS_HOST`      | Host for redis connection(just container hostname)                                                               |
+| `SECRET`      | Secret to sign authentication tokens                                                              |
 | `BOT_TOKEN`           | Token obtained from [@BotFather](https://t.me/BotFather)                     |
-| `BOT_QUEUE`           | Name of the Celery task queue for bot                                        |
 | `TIMEZONE_DB_API_KEY` | API key from [TimeZoneDB](https://timezonedb.com/) to support timezone setup |
+| `TIMEZONE_DB_URL`      | API url of TimeZone service                                                              |
 | `BASE_API_URL`        | URL of the backend API (e.g. `http://backend_container_name:8000/api`)       |
+| `FLOWER_USER`        | Flower admin username       |
+| `FLOWER_PASSSWORD`        | Flower admin password       |
 
 📌 To get a `TIMEZONE_DB_API_KEY`, register at [timezonedb.com](https://timezonedb.com/), then set the key in your environment.
 
 Once the environment is configured and the backend ([MyTracker_api](https://github.com/TheAppleKingy/MyTracker_api)) is running, you can start the bot with:
 
 ```bash
-docker compose up --build
+make tracker.bot.prod.build.start
 ```
 
 ---
