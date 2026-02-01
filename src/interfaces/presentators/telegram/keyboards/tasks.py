@@ -1,4 +1,5 @@
 from typing import Optional, Literal
+from datetime import datetime, timezone
 
 from aiogram import types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -29,6 +30,40 @@ def _add_reminder_button(task_id: int):
 
 def _finish_task_button(task_id: int):
     return types.InlineKeyboardButton(text="Finish", callback_data=f"finish_task_{task_id}")
+
+
+def _reminder_info_button(id_: str, reminder: datetime):
+    return types.InlineKeyboardButton(text=f"{reminder.strftime("%d.%m.%Y at %H:%M")}", callback_data=f"get_reminder_{id_}")
+
+
+def _reminders_button(task_id: int):
+    return types.InlineKeyboardButton(text="Reminders", callback_data=f"get_reminders_{task_id}")
+
+
+def reminders_kb(reminders_tab: dict[str, datetime], task_id: int, user_tz: timezone):
+    builder = InlineKeyboardBuilder()
+    builder.add(*[_reminder_info_button(id_, reminder.astimezone(user_tz)) for id_, reminder in reminders_tab.items()])
+    builder.add(_add_reminder_button(task_id), _back_button(f"get_task_{task_id}"))
+    builder.adjust(2)
+    return builder.as_markup()
+
+
+def no_reminders_kb(task_id: int):
+    builder = InlineKeyboardBuilder()
+    builder.add(_add_reminder_button(task_id), _back_button(f"get_task_{task_id}"))
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def _delete_reminder_button(reminder_id: str):
+    return types.InlineKeyboardButton(text="Delete", callback_data=f"delete_reminder_{reminder_id}")
+
+
+def under_reminder_kb(reminder_id: str, task_id: int):
+    builder = InlineKeyboardBuilder()
+    builder.add(_delete_reminder_button(reminder_id), _back_button(f"get_reminders_{task_id}"))
+    builder.adjust(1)
+    return builder.as_markup()
 
 
 def _subtasks_button(parent_id: int, status: Literal["active", "finished"], page: int):
@@ -94,7 +129,7 @@ def under_task_info_kb(task: Task):
         buttons = [_subtasks_button(task.id, "active", 1), buttons[0]]
         buttons.extend([
             _update_task_button(task.id),
-            _add_reminder_button(task.id),
+            _reminders_button(task.id),
             _add_subtask_button(task.id),
             _finish_task_button(task.id)
         ])

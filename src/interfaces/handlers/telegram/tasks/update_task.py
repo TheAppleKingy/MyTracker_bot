@@ -20,12 +20,12 @@ update_task_router = Router(name='Update tasks')
 
 
 @update_task_router.callback_query(F.data.startswith('update_task_'))
-async def choose_field(cq: types.CallbackQuery, state: FSMContext):
-    await cq.answer()
-    await state.clear()
-    task_id = int(cq.data.split('_')[-1])
-    await state.update_data(updating_task=task_id)
-    return await cq.message.answer(
+async def choose_field(event: types.CallbackQuery, context: FSMContext):
+    await event.answer()
+    await context.clear()
+    task_id = int(event.data.split('_')[-1])
+    await context.update_data(updating_task=task_id)
+    return await event.message.answer(
         text="<b>Choose what do you desire to change</b>",
         reply_markup=update_task_terms_kb(task_id),
         parse_mode="HTML"
@@ -34,46 +34,46 @@ async def choose_field(cq: types.CallbackQuery, state: FSMContext):
 
 @update_task_router.callback_query(F.data.startswith('update_text_'))
 async def ask_enter_value(
-    cq: types.CallbackQuery,
-    state: FSMContext,
+    event: types.CallbackQuery,
+    context: FSMContext,
 ):
-    await cq.answer()
-    field = cq.data.split("_")[-1]
-    await state.set_state(UpdateTaskStates.waiting_text_data)
-    await state.update_data(updating_field=field)
-    return await cq.message.edit_text(text=f"<b>Enter new {field}</b>", reply_markup=None, parse_mode="HTML")
+    await event.answer()
+    field = event.data.split("_")[-1]
+    await context.set_state(UpdateTaskStates.waiting_text_data)
+    await context.update_data(updating_field=field)
+    return await event.message.edit_text(text=f"<b>Enter new {field}</b>", reply_markup=None, parse_mode="HTML")
 
 
 @update_task_router.message(UpdateTaskStates.waiting_text_data)
 async def change_task_text_field(
-    message: types.Message,
-    state: FSMContext,
+    event: types.Message,
+    context: FSMContext,
     backend: FromDishka[BackendClientInterface],
     storage: FromDishka[StorageInterface]
 ):
-    data = await state.get_data()
-    await state.clear()
-    new_value = message.text
+    data = await context.get_data()
+    await context.clear()
+    new_value = event.text
     to_update = {data["updating_field"]: new_value}
-    ok, res = await backend.update_task(message.from_user.username, data["updating_task"], **to_update)
+    ok, res = await backend.update_task(event.from_user.username, data["updating_task"], **to_update)
     if not ok:
         raise HandlerError(res, kb=back_kb(f"get_task_{data["updating_task"]}"))
-    user_tz = await storage.get_tz(message.from_user.username)
-    return await message.answer(
+    user_tz = await storage.get_tz(event.from_user.username)
+    return await event.answer(
         text=show_task_data(res, user_tz), reply_markup=under_task_info_kb(res), parse_mode="HTML")
 
 
 @update_task_router.callback_query(F.data == "update_deadline")
 async def ask_enter_new_deadline_date(
-    cq: types.CallbackQuery,
-    state: FSMContext,
+    event: types.CallbackQuery,
+    context: FSMContext,
     storage: FromDishka[StorageInterface]
 ):
-    await cq.answer()
-    user_tz = await storage.get_tz(cq.from_user.username)
+    await event.answer()
+    user_tz = await storage.get_tz(event.from_user.username)
     now_local = datetime.now(timezone.utc).astimezone(user_tz)
-    await state.set_state(UpdateTaskStates.waiting_deadline_date)
-    return await cq.message.answer(
+    await context.set_state(UpdateTaskStates.waiting_deadline_date)
+    return await event.message.answer(
         text=f"<b>Choose new deadline date</b>",
         reply_markup=await kalendar_kb(now_local.year, now_local.month),
         parse_mode="HTML"
@@ -82,30 +82,30 @@ async def ask_enter_new_deadline_date(
 
 @update_task_router.callback_query(simple_cal_callback.filter(), UpdateTaskStates.waiting_deadline_date)
 async def ask_enter_new_deadline_time(
-    cq: types.CallbackQuery,
+    event: types.CallbackQuery,
     callback_data: simple_cal_callback,
-    state: FSMContext,
+    context: FSMContext,
     storage: FromDishka[StorageInterface]
 ):
-    selected, date = await calendar().process_selection(cq, callback_data)
+    selected, date = await calendar().process_selection(event, callback_data)
     if not selected:
         return
-    user_tz = await storage.get_tz(cq.from_user.username)
+    user_tz = await storage.get_tz(event.from_user.username)
     now_local = datetime.now(timezone.utc).astimezone(user_tz)
     selected_local: datetime = date.replace(tzinfo=user_tz)
     if now_local.date() > selected_local.date():
-        return await cq.message.edit_text(
+        return await event.message.edit_text(
             f'<b>New deadline date cannot be earlier than today</b>',
             reply_markup=await kalendar_kb(now_local.year, now_local.month),
             parse_mode='HTML'
         )
-    await state.update_data(deadline=selected_local.isoformat())
-    await cq.message.edit_text(
+    await context.update_data(deadline=selected_local.isoformat())
+    await event.message.edit_text(
         text=f"<b>Choosen new deadline date is {selected_local.strftime('%d.%m.%Y')}</b>",
         reply_markup=None,
         parse_mode="HTML"
     )
-    return await cq.message.answer(
+    return await event.message.answer(
         text="<b>Select new deadline time</b>",
         reply_markup=deadline_time_kb(user_tz, date, for_update=True),
         parse_mode="HTML"
@@ -114,33 +114,33 @@ async def ask_enter_new_deadline_time(
 
 @update_task_router.callback_query(F.data.startswith("update_deadline_hour_"))
 async def change_task_deadline(
-    cq: types.CallbackQuery,
-    state: FSMContext,
+    event: types.CallbackQuery,
+    context: FSMContext,
     backend: FromDishka[BackendClientInterface]
 ):
-    suf = cq.data.split("_")[-1]
+    suf = event.data.split("_")[-1]
     if suf == "manually":
-        await state.set_state(UpdateTaskStates.waiting_deadline_time)
-        msg = await cq.message.edit_text(
+        await context.set_state(UpdateTaskStates.waiting_deadline_time)
+        msg = await event.message.edit_text(
             text=f"<b>Enter time in format HH:MM</b>",
             reply_markup=None,
             parse_mode="HTML"
         )
-        await state.update_data(last_message=msg.message_id)
+        await context.update_data(last_message=msg.message_id)
         return
     hour = int(suf)
-    data = await state.get_data()
-    await state.clear()
+    data = await context.get_data()
+    await context.clear()
     new_deadline = datetime.fromisoformat(data['deadline']).replace(hour=hour)
-    await cq.message.edit_text(
+    await event.message.edit_text(
         f"<b>Choosen new deadline time is {new_deadline.strftime("%Hh:%Mm")}</b>",
         reply_markup=None,
         parse_mode="HTML"
     )
-    ok, res = await backend.update_task(cq.from_user.username, data["updating_task"], deadline=new_deadline)
+    ok, res = await backend.update_task(event.from_user.username, data["updating_task"], deadline=new_deadline)
     if not ok:
         raise HandlerError(res, kb=back_kb(f"get_task_{data["updating_task"]}"))
-    return await cq.message.answer(
+    return await event.message.answer(
         text=show_task_data(res, new_deadline.tzinfo),
         reply_markup=under_task_info_kb(res),
         parse_mode="HTML"
@@ -149,30 +149,30 @@ async def change_task_deadline(
 
 @update_task_router.message(UpdateTaskStates.waiting_deadline_time)
 async def change_task_deadline_manually(
-    message: types.Message,
-    state: FSMContext,
+    event: types.Message,
+    context: FSMContext,
     backend: FromDishka[BackendClientInterface],
     bot: FromDishka[Bot]
 ):
-    new_time = validate_time(message.text)
-    data = await state.get_data()
+    new_time = validate_time(event.text)
+    data = await context.get_data()
     new_deadline = datetime.fromisoformat(data['deadline']).replace(
         hour=new_time.hour, minute=new_time.minute)
     now_local = datetime.now(timezone.utc).astimezone(new_deadline.tzinfo)
     if now_local > new_deadline:
         raise HandlerError("New deadline time cannot be earlier than now", clear_state=False, add_last_message=True)
-    await state.clear()
+    await context.clear()
     await bot.edit_message_text(
-        chat_id=message.chat.id,
+        chat_id=event.chat.id,
         message_id=data["last_message"],
         text=f"<b>Choosen new deadline time is {new_time.strftime("%Hh:%Mm")}</b>",
         reply_markup=None,
         parse_mode="HTML"
     )
-    ok, res = await backend.update_task(message.from_user.username, data["updating_task"], deadline=new_deadline)
+    ok, res = await backend.update_task(event.from_user.username, data["updating_task"], deadline=new_deadline)
     if not ok:
         raise HandlerError(res, kb=back_kb(f"get_task_{data["updating_task"]}"))
-    return await message.answer(
+    return await event.answer(
         text=show_task_data(res, new_deadline.tzinfo),
         reply_markup=under_task_info_kb(res),
         parse_mode="HTML"
@@ -181,14 +181,14 @@ async def change_task_deadline_manually(
 
 @update_task_router.callback_query(F.data.startswith("finish_task_"))
 async def finish_task(
-    cq: types.CallbackQuery,
-    state: FSMContext,
+    event: types.CallbackQuery,
+    context: FSMContext,
 ):
-    await cq.answer()
-    await state.clear()
-    task_id = int(cq.data.split("_")[-1])
-    await state.update_data(finishing_task=task_id)
-    return await cq.message.answer(
+    await event.answer()
+    await context.clear()
+    task_id = int(event.data.split("_")[-1])
+    await context.update_data(finishing_task=task_id)
+    return await event.message.answer(
         text=f"<b>Do you want to finish all subtasks forcely?</b>",
         reply_markup=yes_or_no_kb("force_finish_task", "soft_finish_task"),
         parse_mode="HTML"
@@ -197,19 +197,19 @@ async def finish_task(
 
 @update_task_router.callback_query(F.data == ("force_finish_task"))
 async def force_finish_task(
-    cq: types.CallbackQuery,
-    state: FSMContext,
+    event: types.CallbackQuery,
+    context: FSMContext,
     backend: FromDishka[BackendClientInterface]
 ):
-    await cq.answer()
-    data = await state.get_data()
-    await state.clear()
-    ok, res = await backend.force_finish_task(cq.from_user.username, data["finishing_task"])
+    await event.answer()
+    data = await context.get_data()
+    await context.clear()
+    ok, res = await backend.force_finish_task(event.from_user.username, data["finishing_task"])
     kb = back_kb(f"get_task_{data["finishing_task"]}")
     if not ok:
         raise HandlerError(res, kb=kb)
-    await state.update_data(after_finish=True)
-    return await cq.message.edit_text(
+    await context.update_data(after_finish=True)
+    return await event.message.edit_text(
         text=f"<b>Task and all subtasks finished</b>",
         reply_markup=kb,
         parse_mode="HTML"
@@ -218,19 +218,19 @@ async def force_finish_task(
 
 @update_task_router.callback_query(F.data == ("soft_finish_task"))
 async def soft_finish_task(
-    cq: types.CallbackQuery,
-    state: FSMContext,
+    event: types.CallbackQuery,
+    context: FSMContext,
     backend: FromDishka[BackendClientInterface]
 ):
-    await cq.answer()
-    data = await state.get_data()
-    await state.clear()
-    ok, res = await backend.finish_task(cq.from_user.username, data["finishing_task"])
+    await event.answer()
+    data = await context.get_data()
+    await context.clear()
+    ok, res = await backend.finish_task(event.from_user.username, data["finishing_task"])
     kb = back_kb(f"get_task_{data["finishing_task"]}")
     if not ok:
         raise HandlerError(res, kb=kb)
-    await state.update_data(after_finish=True)
-    return await cq.message.edit_text(
+    await context.update_data(after_finish=True)
+    return await event.message.edit_text(
         text=f"<b>Task finished</b>",
         reply_markup=kb,
         parse_mode="HTML"

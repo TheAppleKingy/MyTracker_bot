@@ -9,9 +9,9 @@ from src.logger import logger
 
 
 async def _clear_state(data: dict[str, Any]):
-    state: FSMContext = data.get('state')  # type: ignore
-    if state:
-        await state.clear()
+    context: FSMContext = data.get('context')  # type: ignore
+    if context:
+        await context.clear()
 
 
 class HandleErrorMiddleware(BaseMiddleware):
@@ -23,14 +23,14 @@ class HandleErrorMiddleware(BaseMiddleware):
     ) -> Any:
         answer = event.message.answer if isinstance(event, CallbackQuery) else event.answer  # type: ignore
         try:
+            data["context"] = data.pop("state")
             return await handler(event, data)
         except HandlerError as e:
             if e.clear_state:
                 await _clear_state(data)
             res = await answer(text=f"<b>{str(e)}</b>", reply_markup=e.kb, parse_mode="HTML")
             if e.add_last_message:
-                state = data.get("state")
-                await state.update_data(last_message=res.message_id)
+                await data["context"].update_data(last_message=res.message_id)
             return
         except Exception as e:
             await _clear_state(data)
