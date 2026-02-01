@@ -86,7 +86,7 @@ async def ask_deadline_date(
     )
     return await event.message.answer(
         text="<b>Select deadline time</b>",
-        reply_markup=deadline_time_kb(user_tz, date),
+        reply_markup=deadline_time_kb(selected_local),
         parse_mode="HTML"
     )
 
@@ -112,9 +112,9 @@ async def set_deadline_time(
     data = await context.get_data()
     await context.clear()
     user_tz = await storage.get_tz(event.from_user.username)
-    data["deadline"] = datetime.fromisoformat(data['deadline']).replace(hour=hour)
+    data["deadline"] = datetime.fromisoformat(data["deadline"]).replace(hour=hour)
     await event.message.edit_text(
-        f"<b>Choosen deadline time is {'0' + hour if hour <= 9 else hour}h:00m</b>",
+        f"<b>Choosen deadline time is {data["deadline"].strftime("%Hh:%Mm")}</b>",
         reply_markup=None,
         parse_mode="HTML"
     )
@@ -135,7 +135,6 @@ async def set_task_deadline_manually(
     backend: FromDishka[BackendClientInterface],
     bot: FromDishka[Bot]
 ):
-    logger.critical(f"{await context.get_state()}")
     deadline_time = validate_time(event.text)
     data = await context.get_data()
     data["deadline"] = datetime.fromisoformat(data['deadline']).replace(
@@ -147,7 +146,7 @@ async def set_task_deadline_manually(
     await bot.edit_message_text(
         chat_id=event.chat.id,
         message_id=data.pop("last_message"),
-        text=f"<b>Choosen deadline time is {deadline_time.strftime("%Hh:%Mm")}</b>",
+        text=f"<b>Choosen deadline time is {data['deadline'].strftime("%Hh:%Mm")}</b>",
         reply_markup=None,
         parse_mode="HTML"
     )

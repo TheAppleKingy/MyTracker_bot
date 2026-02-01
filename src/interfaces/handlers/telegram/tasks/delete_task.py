@@ -36,16 +36,16 @@ async def delete_task(
 
 @delete_task_router.callback_query(F.data == 'delete_yes_task')
 async def delete_task_yes(
-    cq: types.CallbackQuery,
-    state: FSMContext,
+    event: types.CallbackQuery,
+    context: FSMContext,
     backend: FromDishka[BackendClientInterface]
 ):
-    await cq.answer()
-    data = await state.get_data()
-    await state.clear()
-    ok, res = await backend.delete_task(cq.from_user.username, data["task_id"])
+    await event.answer()
+    data = await context.get_data()
+    await context.clear()
+    ok, res = await backend.delete_task(event.from_user.username, data["task_id"])
     kb = back_kb(f"get_subtasks_{data["deleted_status"]}_{data["parent_id"]}_1" if data.get(
         "parent_id") else f"get_tasks_{data["deleted_status"]}_1")
     if not ok:
         raise HandlerError(res, kb=kb)
-    await cq.message.answer("<b>Task deleted</b>", reply_markup=kb, parse_mode="HTML")
+    await event.message.answer("<b>Task deleted</b>", reply_markup=kb, parse_mode="HTML")

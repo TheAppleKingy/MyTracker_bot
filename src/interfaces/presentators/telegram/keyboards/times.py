@@ -35,8 +35,11 @@ def time_kb(
     return builder.as_markup()
 
 
-def deadline_time_kb(user_tz: timezone, selected_date: datetime, for_update: bool = False):
-    now_local = datetime.now(timezone.utc).astimezone(user_tz)
+def deadline_time_kb(
+        selected_date: datetime,
+        for_update: bool = False,
+):
+    now_local = datetime.now(timezone.utc).astimezone(selected_date.tzinfo)
     action: Literal["set", "update"] = 'set'
     if for_update:
         action = 'update'
