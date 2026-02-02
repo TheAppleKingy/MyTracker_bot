@@ -112,7 +112,7 @@ async def set_remind_hour(
     await context.clear()
     delta_str = show_timedelta_verbose(delta)
     msg = f'<b>Task "{data["task_title"]}" is waiting! Deadline over ' + delta_str + "</b>"
-    id_ = notify_service.send_notify(msg, event.chat.id, remind_datetime_utc)
+    id_ = notify_service.send_notify(event.from_user.username, msg, event.message.chat.id, remind_datetime_utc)
     await storage.set_reminder(event.from_user.username, remind_datetime_utc, id_)
     await event.message.edit_text(
         text=f'<b>Chosen time for remind is {remind_datetime_utc.astimezone(current_deadline_local.tzinfo).strftime("%Hh:%Mm")}</b>',
@@ -153,7 +153,7 @@ async def set_remind_hour_manually(
     await context.clear()
     delta_str = show_timedelta_verbose(delta)
     msg = f'<b>Task "{data["task_title"]}" is waiting! Deadline over ' + delta_str + "</b>"
-    id_ = notify_service.send_notify(msg, event.chat.id, remind_datetime_utc)
+    id_ = notify_service.send_notify(event.from_user.username, msg, event.chat.id, remind_datetime_utc)
     await storage.set_reminder(event.from_user.username, remind_datetime_utc, id_)
     await bot.edit_message_text(
         chat_id=event.chat.id,
