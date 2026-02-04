@@ -6,7 +6,6 @@ from dishka.integrations.aiogram import FromDishka
 from src.application.interfaces.clients import BackendClientInterface
 from src.interfaces.presentators.telegram.keyboards.shared import main_kb
 from src.interfaces.presentators.telegram.keyboards.auth import register_kb
-from src.logger import logger
 from .errors import HandlerError
 
 

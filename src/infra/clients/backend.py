@@ -149,9 +149,12 @@ class HttpBackendClient(BackendClientInterface):
     ) -> BackendResponse[tuple[int, int, list[TaskPreview]]]:
         return await self._get_paginated_tasks(self._uris.subtasks(parent_id), tg_name, page, size, params={"status": status})
 
-    async def delete_task(self, tg_name: str, task_id: int) -> BackendResponse[None]:
+    async def delete_task(self, tg_name: str, task_id: int) -> BackendResponse[list[int]]:
         resp = await self._auth_client(tg_name).delete(self._uris.task_info(task_id))
-        return self._handle_response(resp)
+        ok, res = self._handle_response(resp)
+        if not ok:
+            return ok, res
+        return ok, res["subtasks_ids"]
 
     async def update_task(
         self,
@@ -178,7 +181,10 @@ class HttpBackendClient(BackendClientInterface):
 
     async def force_finish_task(self, tg_name: int, task_id: int) -> BackendResponse[None]:
         resp = await self._auth_client(tg_name).patch(self._uris.force_finish_task(task_id))
-        return self._handle_response(resp)
+        ok, res = self._handle_response(resp)
+        if not ok:
+            return ok, res
+        return ok, res["subtasks_ids"]
 
     async def check_task_active(self, tg_name: str, task_id: int) -> BackendResponse[bool]:
         resp = await self._auth_client(tg_name).get(self._uris.check_task_active(task_id))

@@ -4,6 +4,8 @@ from dishka.integrations.aiogram import FromDishka
 
 from src.interfaces.presentators.telegram.keyboards.shared import back_kb, main_page_kb, yes_or_no_kb
 from src.application.interfaces.clients import BackendClientInterface
+from src.application.interfaces.services import NotifyServiceInterface
+from src.application.interfaces import AsyncStorageInterface
 from src.interfaces.handlers.telegram.errors import HandlerError
 from src.logger import logger
 
@@ -14,7 +16,7 @@ delete_task_router = Router(name='Delete tasks')
 async def delete_task(
     event: types.CallbackQuery,
     context: FSMContext,
-    backend: FromDishka[BackendClientInterface]
+    backend: FromDishka[BackendClientInterface],
 ):
     await event.answer()
     await context.clear()
@@ -38,7 +40,9 @@ async def delete_task(
 async def delete_task_yes(
     event: types.CallbackQuery,
     context: FSMContext,
-    backend: FromDishka[BackendClientInterface]
+    backend: FromDishka[BackendClientInterface],
+    notify_service: FromDishka[NotifyServiceInterface],
+    storage: FromDishka[AsyncStorageInterface]
 ):
     await event.answer()
     data = await context.get_data()
@@ -48,4 +52,9 @@ async def delete_task_yes(
         "parent_id") else f"get_tasks_{data["deleted_status"]}_1")
     if not ok:
         raise HandlerError(res, kb=kb)
+    to_revoke = await storage.delete_all_reminders(event.from_user.username, data["task_id"])
+    for sub_id in res:
+        to_revoke.extend(await storage.delete_all_reminders(event.from_user.username, sub_id))
+    for reminder_id in to_revoke:
+        notify_service.revoke_reminder(reminder_id)
     await event.message.answer("<b>Task deleted</b>", reply_markup=kb, parse_mode="HTML")

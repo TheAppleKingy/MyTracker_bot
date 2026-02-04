@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from dishka.integrations.aiogram import FromDishka
 
 from src.application.interfaces.clients import CountryClientInterface, TimezoneClientInterface
-from src.application.interfaces import StorageInterface
+from src.application.interfaces import AsyncStorageInterface
 from src.interfaces.handlers.telegram.states.settings import SetTZStates
 from src.interfaces.presentators.telegram.keyboards.settings import timezones_page_kb
 from src.interfaces.presentators.telegram.keyboards.shared import back_kb
@@ -62,7 +62,7 @@ async def another_tz_page(
 async def set_user_tz(
     event: types.CallbackQuery,
     context: FSMContext,
-    storage: FromDishka[StorageInterface]
+    storage: FromDishka[AsyncStorageInterface]
 ):
     await event.answer()
     prepared_callback_data = event.data.split("_")

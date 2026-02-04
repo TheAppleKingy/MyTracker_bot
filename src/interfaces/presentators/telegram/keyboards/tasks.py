@@ -32,8 +32,11 @@ def _finish_task_button(task_id: int):
     return types.InlineKeyboardButton(text="Finish", callback_data=f"finish_task_{task_id}")
 
 
-def _reminder_info_button(id_: str, reminder: datetime):
-    return types.InlineKeyboardButton(text=f"{reminder.strftime("%d.%m.%Y at %H:%M")}", callback_data=f"get_reminder_{id_}")
+def _reminder_info_button(task_id: int, reminder_id: str, reminder: datetime):
+    return types.InlineKeyboardButton(
+        text=f"{reminder.strftime("%d.%m.%Y at %H:%M")}",
+        callback_data=f"get_reminder_{task_id}_{reminder_id}"
+    )
 
 
 def _reminders_button(task_id: int):
@@ -42,9 +45,10 @@ def _reminders_button(task_id: int):
 
 def reminders_kb(reminders_tab: dict[str, datetime], task_id: int, user_tz: timezone):
     builder = InlineKeyboardBuilder()
-    builder.add(*[_reminder_info_button(id_, reminder.astimezone(user_tz)) for id_, reminder in reminders_tab.items()])
+    builder.add(*[_reminder_info_button(task_id, id_, reminder.astimezone(user_tz))
+                for id_, reminder in reminders_tab.items()])
     builder.add(_add_reminder_button(task_id), _back_button(f"get_task_{task_id}"))
-    builder.adjust(2)
+    builder.adjust(1)
     return builder.as_markup()
 
 
@@ -55,13 +59,13 @@ def no_reminders_kb(task_id: int):
     return builder.as_markup()
 
 
-def _delete_reminder_button(reminder_id: str):
-    return types.InlineKeyboardButton(text="Delete", callback_data=f"delete_reminder_{reminder_id}")
+def _delete_reminder_button(reminder_id: str, task_id: int):
+    return types.InlineKeyboardButton(text="Delete", callback_data=f"delete_reminder_{task_id}_{reminder_id}")
 
 
 def under_reminder_kb(reminder_id: str, task_id: int):
     builder = InlineKeyboardBuilder()
-    builder.add(_delete_reminder_button(reminder_id), _back_button(f"get_reminders_{task_id}"))
+    builder.add(_delete_reminder_button(reminder_id, task_id), _back_button(f"get_reminders_{task_id}"))
     builder.adjust(1)
     return builder.as_markup()
 

@@ -1,16 +1,15 @@
 from celery import Celery  # type: ignore
 from celery.signals import worker_process_shutdown  # type: ignore
-from aiogram import Bot
 from dishka import make_container, Provider, provide, Scope, Container
 from dishka.integrations.celery import DishkaTask, setup_dishka
-from redis.asyncio import Redis, from_url
+from redis import Redis, from_url
 
 from src.infra.configs import BotConfig, RedisConfig
-from src.infra.redis_storage import RedisBotStorage
-from src.application.interfaces.storage import StorageInterface
+from src.infra.redis_storage import SyncRedisBotStorage
+from src.application.interfaces.storage import SyncStorageInterface
 
 
-class BotProvider(Provider):
+class WorkerProvider(Provider):
     scope = Scope.APP
 
     @provide
@@ -25,16 +24,12 @@ class BotProvider(Provider):
     def redis(self, conf: RedisConfig) -> Redis:
         return from_url(conf.conn_url, decode_responses=True)
 
-    @provide
-    def storage(self, redis: Redis) -> StorageInterface:
-        return RedisBotStorage(redis)
-
-    @provide
-    def bot(self, conf: BotConfig) -> Bot:
-        return Bot(conf.bot_token)
+    @provide(scope=Scope.REQUEST)
+    def storage(self, redis: Redis) -> SyncStorageInterface:
+        return SyncRedisBotStorage(redis)
 
 
-container = make_container(BotProvider())
+container = make_container(WorkerProvider())
 
 
 def get_celery():

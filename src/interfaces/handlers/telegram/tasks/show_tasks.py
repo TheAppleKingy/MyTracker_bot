@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from dishka.integrations.aiogram import FromDishka
 
 from src.application.interfaces.clients import BackendClientInterface
-from src.application.interfaces import StorageInterface
+from src.application.interfaces import AsyncStorageInterface
 from src.interfaces.presentators.telegram.keyboards.tasks import under_task_info_kb, no_tasks_kb, page_tasks_kb, no_subtasks_kb
 from src.interfaces.presentators.telegram.keyboards.shared import main_page_kb, back_kb
 from src.interfaces.presentators.task import show_task_data
@@ -78,7 +78,7 @@ async def task_info(
     event: types.CallbackQuery,
     context: FSMContext,
     backend: FromDishka[BackendClientInterface],
-    storage: FromDishka[StorageInterface]
+    storage: FromDishka[AsyncStorageInterface]
 ):
     await event.answer()
     await context.clear()
