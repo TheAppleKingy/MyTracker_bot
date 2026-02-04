@@ -13,7 +13,7 @@ from src.interfaces.handlers.telegram.states.task import CreateTaskStates
 from src.interfaces.adapters.time import validate_time
 from src.interfaces.presentators.task import show_task_data
 from src.application.interfaces.clients import BackendClientInterface
-from src.application.interfaces import StorageInterface
+from src.application.interfaces import AsyncStorageInterface
 from src.interfaces.handlers.telegram.errors import HandlerError
 from src.logger import logger
 
@@ -40,7 +40,7 @@ async def ask_description(event: types.Message, context: FSMContext):
 async def check_tz(
     event: types.Message,
     context: FSMContext,
-    storage: FromDishka[StorageInterface]
+    storage: FromDishka[AsyncStorageInterface]
 ):
     await context.update_data({'description': event.text})
     await context.set_state(CreateTaskStates.waiting_deadline_date)
@@ -63,7 +63,7 @@ async def ask_deadline_date(
     event: types.CallbackQuery,
     callback_data: simple_cal_callback,
     context: FSMContext,
-    storage: FromDishka[StorageInterface]
+    storage: FromDishka[AsyncStorageInterface]
 ):
     await event.answer()
     selected, date = await calendar().process_selection(event, callback_data)
@@ -95,7 +95,7 @@ async def ask_deadline_date(
 async def set_deadline_time(
     event: types.CallbackQuery,
     context: FSMContext,
-    storage: FromDishka[StorageInterface],
+    storage: FromDishka[AsyncStorageInterface],
     backend: FromDishka[BackendClientInterface]
 ):
     suf = event.data.split("_")[-1]
@@ -161,10 +161,22 @@ async def set_task_deadline_manually(
 
 
 @create_task_router.callback_query(F.data.startswith('create_subtask_'))
-async def create_subtask(event: types.CallbackQuery, context: FSMContext):
+async def create_subtask(
+    event: types.CallbackQuery,
+    context: FSMContext,
+    backend: FromDishka[BackendClientInterface]
+):
     await event.answer()
     await context.clear()
     parent_id = int(event.data.split('_')[-1])
+    ok, res = await backend.get_task(event.from_user.username, parent_id)
+    if not ok:
+        raise HandlerError(res, kb=back_kb(f"get_task_{parent_id}"))
+    if datetime.now(timezone.utc) > res.deadline:
+        raise HandlerError(
+            "Unable to add subtask if deadline passed and task was not mark as finished. Change deadline",
+            kb=back_kb(f"get_task_{parent_id}")
+        )
     await context.update_data(parent_id=parent_id)
     await context.set_state(CreateTaskStates.waiting_title)
     return await event.message.answer('<b>Send me subtask title</b>', parse_mode="HTML")

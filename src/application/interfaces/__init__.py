@@ -1,1 +1,1 @@
-from .storage import StorageInterface
+from .storage import AsyncStorageInterface, SyncStorageInterface

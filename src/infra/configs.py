@@ -7,6 +7,11 @@ class BotConfig(BaseSettings):
     timezone_db_api_key: str
     timezone_db_url: str
     secret: str
+    bot_send_message_base_url: str
+
+    @property
+    def bot_send_message_url(self):
+        return self.bot_send_message_base_url + self.bot_token + "/sendMessage"
 
 
 class RedisConfig(BaseSettings):

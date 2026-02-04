@@ -10,8 +10,9 @@ from src.application.interfaces.services import *
 from src.infra.clients import *
 from src.infra.configs import RedisConfig, BotConfig
 from src.infra.services import *
-from src.infra.redis_storage import RedisBotStorage
+from src.infra.redis_storage import AsyncRedisBotStorage
 from src.interfaces.handlers.telegram.middleware import HandleErrorMiddleware
+from src.interfaces.handlers.telegram.tasks.shared import *
 
 
 class ClientsProvider(Provider):
@@ -53,11 +54,16 @@ class ConfProvider(Provider):
 class SharedProvider(Provider):
     scope = Scope.APP
 
+    set_reminder_case = provide(SetReminder, scope=Scope.REQUEST)
+    change_deadline_case = provide(ChangeDeadline, scope=Scope.REQUEST)
+    finish_task_case = provide(FinishTask, scope=Scope.REQUEST)
+    force_finish_task_case = provide(ForceFinishTask, scope=Scope.REQUEST)
+
     @provide
     def get_redis(self, conf: RedisConfig) -> Redis:
         return from_url(conf.conn_url, decode_responses=True)
 
-    redis_bot_storage = provide(RedisBotStorage, provides=StorageInterface, scope=Scope.REQUEST)
+    redis_bot_storage = provide(AsyncRedisBotStorage, provides=AsyncStorageInterface, scope=Scope.REQUEST)
 
     @provide
     def fsm_storage(self, redis: Redis) -> RedisStorage:
